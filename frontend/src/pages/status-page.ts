@@ -148,7 +148,7 @@ export class StatusPage extends LitElement {
       background: var(--bg-card); border: 1px solid var(--border-subtle);
       border-radius: var(--r-lg); overflow: hidden;
       box-shadow: var(--shadow-card);
-      flex: 1; min-height: 0; display: flex; flex-direction: column;
+      flex: 1; min-height: 300px; display: flex; flex-direction: column;
     }
     .config-json pre {
       background: transparent; border: none;
