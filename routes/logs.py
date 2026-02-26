@@ -10,14 +10,20 @@ from dashboard.config import NANOBOT_ROOT
 async def list_logs(request: web.Request) -> web.Response:
     """List all .log files in NANOBOT_ROOT."""
     files = []
-    for entry in sorted(NANOBOT_ROOT.iterdir()):
-        if entry.is_file() and entry.suffix == ".log":
-            stat = entry.stat()
-            files.append({
-                "name": entry.name,
-                "size": stat.st_size,
-                "modified": stat.st_mtime,
-            })
+    try:
+        for entry in sorted(NANOBOT_ROOT.iterdir()):
+            if entry.is_file() and entry.suffix == ".log":
+                try:
+                    stat = entry.stat()
+                    files.append({
+                        "name": entry.name,
+                        "size": stat.st_size,
+                        "modified": stat.st_mtime,
+                    })
+                except OSError:
+                    continue
+    except OSError:
+        pass
     return web.json_response({"files": files})
 
 

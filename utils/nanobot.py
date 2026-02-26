@@ -26,14 +26,20 @@ def read_config() -> dict:
     """Read nanobot config.json."""
     if not CONFIG_FILE.exists():
         return {}
-    return json.loads(CONFIG_FILE.read_text())
+    try:
+        return json.loads(CONFIG_FILE.read_text())
+    except (json.JSONDecodeError, OSError):
+        return {}
 
 
 def read_cron_jobs() -> dict:
     """Read cron/jobs.json."""
     if not CRON_JOBS_FILE.exists():
         return {"version": 1, "jobs": []}
-    return json.loads(CRON_JOBS_FILE.read_text())
+    try:
+        return json.loads(CRON_JOBS_FILE.read_text())
+    except (json.JSONDecodeError, OSError):
+        return {"version": 1, "jobs": []}
 
 
 def write_cron_jobs(data: dict):

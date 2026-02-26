@@ -1,5 +1,7 @@
 """Bearer token authentication middleware."""
 
+import secrets
+
 from aiohttp import web
 
 from dashboard.config import AUTH_TOKEN
@@ -20,7 +22,7 @@ async def auth_middleware(request: web.Request, handler):
         raise web.HTTPUnauthorized(text="Missing Bearer token")
 
     token = auth_header[7:]
-    if token != AUTH_TOKEN:
+    if not secrets.compare_digest(token, AUTH_TOKEN):
         raise web.HTTPForbidden(text="Invalid token")
 
     return await handler(request)

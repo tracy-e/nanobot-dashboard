@@ -6,5 +6,8 @@ __pycache__/
 frontend/node_modules/
 static/
 
+# Claude Code
+CLAUDE.md
+
 # macOS
 .DS_Store

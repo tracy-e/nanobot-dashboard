@@ -24,7 +24,12 @@ def safe_resolve(base: Path, user_path: str) -> Path:
 
 def sanitize_config(config: dict) -> dict:
     """Replace API keys and secrets with '***'."""
-    sensitive_keys = {"apiKey", "appSecret", "token", "encryptKey", "verificationToken", "apiBase"}
+    sensitive_keys = {
+        "apiKey", "api_key", "appSecret", "app_secret",
+        "token", "secret", "secret_key", "secretKey",
+        "encryptKey", "encrypt_key", "verificationToken",
+        "verification_token", "password", "api_base", "apiBase",
+    }
 
     def _sanitize(obj):
         if isinstance(obj, dict):

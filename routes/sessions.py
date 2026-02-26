@@ -47,25 +47,6 @@ def _read_metadata(filepath: Path) -> dict | None:
     return None
 
 
-def _count_messages(filepath: Path) -> int:
-    """Count message lines (skip metadata)."""
-    try:
-        count = 0
-        with open(filepath, "r") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    data = json.loads(line)
-                    if data.get("_type") != "metadata" and "role" in data:
-                        count += 1
-                except json.JSONDecodeError:
-                    continue
-        return count
-    except Exception:
-        return 0
-
 
 async def list_sessions(request: web.Request) -> web.Response:
     channel_filter = request.query.get("channel")
