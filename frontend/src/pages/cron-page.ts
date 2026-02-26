@@ -124,6 +124,25 @@ export class CronPage extends LitElement {
       margin-bottom: 18px; letter-spacing: -0.3px;
     }
 
+    /* Form */
+    .form-row { display: flex; gap: 14px; margin-bottom: 14px; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+    .form-group label {
+      font-size: 11px; color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: 0.5px; font-weight: 600;
+    }
+    .form-group input, .form-group textarea {
+      background: var(--bg-input); border: 1px solid var(--border-default);
+      border-radius: var(--r-sm); padding: 9px 14px; color: var(--text-primary);
+      font-size: 13px; font-family: var(--font-sans);
+      transition: border-color 0.15s var(--ease);
+    }
+    .form-group textarea { min-height: 80px; resize: vertical; }
+    .form-group input:focus, .form-group textarea:focus {
+      outline: none; border-color: var(--green);
+    }
+    .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+
     .error { color: var(--red); margin-bottom: 12px; font-size: 13px; }
 
     @media (max-width: 768px) {
