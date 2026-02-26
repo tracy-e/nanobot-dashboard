@@ -1,0 +1,10 @@
+# Python
+__pycache__/
+*.pyc
+
+# Frontend
+frontend/node_modules/
+static/
+
+# macOS
+.DS_Store
