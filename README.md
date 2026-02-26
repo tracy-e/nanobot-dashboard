@@ -1,3 +1,5 @@
+[中文文档](README_CN.md)
+
 # Nanobot Dashboard
 
 A standalone web dashboard for managing [nanobot](https://github.com/HKUDS/nanobot) — an ultra-lightweight personal AI assistant.
