@@ -15,14 +15,13 @@ const emptyForm = (): FormData => ({
   name: "", schedule: "", message: "", deliver: false, channel: "", to: "",
 });
 
-// Cron frequency presets
+// Cron frequency presets - frequency only, time is set separately
 const CRON_PRESETS = [
-  { label: "每分钟", value: "* * * * *" },
-  { label: "每小时", value: "0 * * * *" },
-  { label: "每天", value: "0 0 * * *" },
-  { label: "每周一", value: "0 0 * * 1" },
-  { label: "每月 1 号", value: "0 0 1 * *" },
-  { label: "自定义", value: "custom" },
+  { label: "Every minute", value: "minutely", cron: "* * * * *" },
+  { label: "Hourly", value: "hourly", cron: "0 * * * *" },
+  { label: "Daily", value: "daily", cron: "{m} {h} * * *" },
+  { label: "Weekly (Mon)", value: "weekly", cron: "{m} {h} * * 1" },
+  { label: "Monthly (1st)", value: "monthly", cron: "{m} {h} 1 * *" },
 ];
 
 @customElement("cron-page")
@@ -32,9 +31,8 @@ export class CronPage extends LitElement {
   @state() private refreshing = false;
   @state() private formMode: string | null = null;
   @state() private formData: FormData = emptyForm();
-  @state() private scheduleMode: "preset" | "custom" = "custom";
-  @state() private selectedPreset = "0 0 * * *";
-  @state() private customHour = "0";
+  @state() private selectedPreset = "daily";
+  @state() private customHour = "9";
   @state() private customMinute = "0";
 
   static styles = css`
@@ -216,9 +214,8 @@ export class CronPage extends LitElement {
   openNew() {
     this.formMode = "new";
     this.formData = emptyForm();
-    this.scheduleMode = "preset";
-    this.selectedPreset = "0 0 * * *";
-    this.customHour = "0";
+    this.selectedPreset = "daily";
+    this.customHour = "9";
     this.customMinute = "0";
   }
 
@@ -233,35 +230,53 @@ export class CronPage extends LitElement {
       channel: job.payload?.channel || "",
       to: job.payload?.to || "",
     };
-    // Try to detect preset
-    const preset = CRON_PRESETS.find(p => p.value === expr);
-    if (preset) {
-      this.scheduleMode = preset.value === "custom" ? "custom" : "preset";
-      this.selectedPreset = expr;
-    } else {
-      // Parse custom cron
-      this.scheduleMode = "custom";
-      const parts = expr.split(" ");
-      if (parts.length >= 2) {
-        this.customMinute = parts[0] === "*" ? "0" : parts[0];
-        this.customHour = parts[1] === "*" ? "0" : parts[1];
-      }
+    // Parse cron to detect preset and time
+    this.parseCronExpression(expr);
+  }
+
+  private parseCronExpression(expr: string) {
+    const parts = expr.split(" ");
+    if (parts.length < 5) {
+      this.selectedPreset = "daily";
+      this.customHour = "9";
+      this.customMinute = "0";
+      return;
     }
+    const [m, h, dom, mon, dow] = parts;
+
+    // Detect preset type
+    if (expr === "* * * * *") {
+      this.selectedPreset = "minutely";
+    } else if (expr === "0 * * * *") {
+      this.selectedPreset = "hourly";
+    } else if (dom === "*" && dow === "*") {
+      this.selectedPreset = "daily";
+    } else if (dom === "*" && dow === "1") {
+      this.selectedPreset = "weekly";
+    } else if (dom === "1" && dow === "*") {
+      this.selectedPreset = "monthly";
+    } else {
+      this.selectedPreset = "daily";
+    }
+
+    // Parse time
+    this.customMinute = m === "*" ? "0" : m;
+    this.customHour = h === "*" ? "0" : h;
   }
 
   private buildSchedule(): string {
-    if (this.scheduleMode === "preset") {
-      return this.selectedPreset;
+    const preset = CRON_PRESETS.find(p => p.value === this.selectedPreset);
+    if (!preset) return `0 9 * * *`;
+
+    // Minutely and hourly use fixed cron
+    if (this.selectedPreset === "minutely" || this.selectedPreset === "hourly") {
+      return preset.cron;
     }
-    // Custom: build cron from hour/minute inputs
+
+    // Others: substitute time placeholders
     const h = this.customHour || "0";
     const m = this.customMinute || "0";
-    return `${m} ${h} * * *`;
-  }
-
-  private parsePresetOnChange(value: string) {
-    this.selectedPreset = value;
-    this.formData.schedule = value;
+    return preset.cron.replace("{h}", h).replace("{m}", m);
   }
 
   closeForm() {
@@ -303,6 +318,7 @@ export class CronPage extends LitElement {
 
   private renderModal() {
     const isNew = this.formMode === "new";
+    const needsTime = !["minutely", "hourly"].includes(this.selectedPreset);
     return html`
       <div class="modal-backdrop" @click=${this.closeForm}>
         <div class="modal" @click=${(e: Event) => e.stopPropagation()}>
@@ -318,48 +334,40 @@ export class CronPage extends LitElement {
 
           <!-- Schedule -->
           <div class="form-group" style="margin-bottom:14px">
-            <label>Schedule</label>
-            <div style="display:flex;gap:10px;margin-bottom:10px">
+            <label>Frequency</label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
               ${CRON_PRESETS.map(
                 p => html`
                   <button
-                    class="btn btn-sm ${this.scheduleMode === "preset" && this.selectedPreset === p.value ? "btn-primary" : "btn-ghost"}"
-                    @click=${() => {
-                      this.scheduleMode = "preset";
-                      this.parsePresetOnChange(p.value);
-                    }}
+                    class="btn btn-sm ${this.selectedPreset === p.value ? "btn-primary" : "btn-ghost"}"
+                    @click=${() => { this.selectedPreset = p.value; }}
                   >${p.label}</button>
                 `
               )}
             </div>
-            ${this.scheduleMode === "custom" ? html`
-              <div class="form-row" style="align-items:center;margin-bottom:10px">
-                <span style="font-size:13px;color:var(--text-secondary)">每天</span>
+            ${needsTime ? html`
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                <span style="font-size:13px;color:var(--text-secondary)">At</span>
                 <select
-                  style="width:80px;background:var(--bg-input);border:1px solid var(--border-default);border-radius:var(--r-sm);padding:8px;color:var(--text-primary);font-size:13px"
+                  style="width:70px;background:var(--bg-input);border:1px solid var(--border-default);border-radius:var(--r-sm);padding:8px;color:var(--text-primary);font-size:13px"
                   .value=${this.customHour}
-                  @change=${(e: any) => { this.customHour = e.target.value; this.formData.schedule = this.buildSchedule(); }}
+                  @change=${(e: any) => { this.customHour = e.target.value; }}
                 >
                   ${Array.from({ length: 24 }, (_, i) => html`<option value=${i}>${String(i).padStart(2, "0")}</option>`)}
                 </select>
-                <span style="font-size:13px;color:var(--text-secondary)">时</span>
+                <span style="font-size:13px;color:var(--text-secondary)">:</span>
                 <select
-                  style="width:80px;background:var(--bg-input);border:1px solid var(--border-default);border-radius:var(--r-sm);padding:8px;color:var(--text-primary);font-size:13px"
+                  style="width:70px;background:var(--bg-input);border:1px solid var(--border-default);border-radius:var(--r-sm);padding:8px;color:var(--text-primary);font-size:13px"
                   .value=${this.customMinute}
-                  @change=${(e: any) => { this.customMinute = e.target.value; this.formData.schedule = this.buildSchedule(); }}
+                  @change=${(e: any) => { this.customMinute = e.target.value; }}
                 >
                   ${Array.from({ length: 60 }, (_, i) => html`<option value=${i}>${String(i).padStart(2, "0")}</option>`)}
                 </select>
-                <span style="font-size:13px;color:var(--text-secondary)">分</span>
               </div>
-              <div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono)">
-                Cron: ${this.buildSchedule()}
-              </div>
-            ` : html`
-              <div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono)">
-                Cron: ${this.selectedPreset}
-              </div>
-            `}
+            ` : ""}
+            <div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono)">
+              Cron: ${this.buildSchedule()}
+            </div>
           </div>
 
           <div class="form-group" style="margin-bottom:14px">
