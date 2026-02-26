@@ -12,6 +12,7 @@ CRON_JOBS_FILE = NANOBOT_ROOT / "cron" / "jobs.json"
 SESSIONS_DIR = NANOBOT_ROOT / "workspace" / "sessions"
 WORKSPACE_DIR = NANOBOT_ROOT / "workspace"
 MEMORY_DIR = NANOBOT_ROOT / "workspace" / "memory"
+MEDIA_DIR = NANOBOT_ROOT / "media"
 GATEWAY_LOG = NANOBOT_ROOT / "gateway.log"
 
 # Server settings

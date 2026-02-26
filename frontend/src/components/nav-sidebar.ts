@@ -5,6 +5,7 @@ import { customElement, property } from "lit/decorators.js";
 export class NavSidebar extends LitElement {
   @property() active = "status";
   @property({ type: Array }) hiddenItems: string[] = [];
+  @property({ type: Boolean, reflect: true }) open = false;
 
   static styles = css`
     :host {
@@ -113,6 +114,16 @@ export class NavSidebar extends LitElement {
       color: var(--text-muted);
       letter-spacing: 0.2px;
     }
+
+    @media (max-width: 768px) {
+      :host {
+        position: fixed; z-index: 100; top: 0; left: 0; bottom: 0;
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        box-shadow: 4px 0 24px rgba(0,0,0,0.3);
+      }
+      :host([open]) { transform: translateX(0); }
+    }
   `;
 
   // SVG icon templates (18x18 viewBox, stroke-based)
@@ -135,6 +146,10 @@ export class NavSidebar extends LitElement {
                    <path d="M16 4c-2-1-4-1-7 0v12c3-1 5-1 7 0z"/>`,
     // Skills — lightning bolt
     skills: svg`<path d="M10 2L4 10h4.5l-1 6L14 8H9.5z" fill="currentColor" stroke="none" opacity="0.85"/>`,
+    // Media — image/play
+    media: svg`<rect x="2" y="3" width="14" height="12" rx="2"/>
+               <circle cx="6.5" cy="7" r="1.5"/>
+               <path d="M2 13l4-4 2 2 4-4 4 4"/>`,
     // Logs — terminal/document lines
     logs: svg`<rect x="2" y="2" width="14" height="14" rx="2"/>
               <path d="M5 6h8M5 9h6M5 12h4"/>`,
@@ -147,8 +162,13 @@ export class NavSidebar extends LitElement {
     { id: "memory", label: "Memory" },
     { id: "knowledge", label: "Knowledge" },
     { id: "skills", label: "Skills" },
+    { id: "media", label: "Media" },
     { id: "logs", label: "Logs" },
   ];
+
+  private _close() {
+    this.dispatchEvent(new CustomEvent("close"));
+  }
 
   render() {
     return html`

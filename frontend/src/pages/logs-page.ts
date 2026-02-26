@@ -86,6 +86,13 @@ export class LogsPage extends LitElement {
       padding: 48px; text-align: center; color: var(--text-muted); font-size: 14px;
     }
     .error { color: var(--red); padding: 12px; }
+
+    @media (max-width: 768px) {
+      h1 { font-size: 20px; }
+      .tabs { overflow-x: auto; flex-wrap: nowrap; width: auto; }
+      .tab { white-space: nowrap; flex-shrink: 0; }
+      .log-content { padding: 12px 14px; font-size: 11px; }
+    }
   `;
 
   connectedCallback() {
