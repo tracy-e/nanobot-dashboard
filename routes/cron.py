@@ -135,7 +135,7 @@ async def run_job(request: web.Request) -> web.Response:
         stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=10)
         return web.json_response({
             "triggered": job_id,
-            "returncode": proc.returncode,
+            "returncode": proc.returncode or 0,
             "stdout": stdout.decode(errors="replace"),
             "stderr": stderr.decode(errors="replace"),
         })
