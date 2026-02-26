@@ -15,13 +15,24 @@ const emptyForm = (): FormData => ({
   name: "", schedule: "", message: "", deliver: false, channel: "", to: "",
 });
 
-// Cron frequency presets - frequency only, time is set separately
+// Cron frequency presets
 const CRON_PRESETS = [
-  { label: "Every minute", value: "minutely", cron: "* * * * *" },
-  { label: "Hourly", value: "hourly", cron: "0 * * * *" },
-  { label: "Daily", value: "daily", cron: "{m} {h} * * *" },
-  { label: "Weekly (Mon)", value: "weekly", cron: "{m} {h} * * 1" },
-  { label: "Monthly (1st)", value: "monthly", cron: "{m} {h} 1 * *" },
+  { label: "Every minute", value: "minutely" },
+  { label: "Hourly", value: "hourly" },
+  { label: "Daily", value: "daily" },
+  { label: "Weekly", value: "weekly" },
+  { label: "Monthly", value: "monthly" },
+  { label: "Custom", value: "custom" },
+];
+
+const WEEKDAYS = [
+  { label: "Mon", value: 1 },
+  { label: "Tue", value: 2 },
+  { label: "Wed", value: 3 },
+  { label: "Thu", value: 4 },
+  { label: "Fri", value: 5 },
+  { label: "Sat", value: 6 },
+  { label: "Sun", value: 0 },
 ];
 
 @customElement("cron-page")
@@ -34,6 +45,9 @@ export class CronPage extends LitElement {
   @state() private selectedPreset = "daily";
   @state() private customHour = "9";
   @state() private customMinute = "0";
+  @state() private selectedWeekdays: number[] = [1];
+  @state() private selectedMonthDay = "1";
+  @state() private customCron = "";
 
   static styles = css`
     :host { display: block; }
@@ -217,6 +231,9 @@ export class CronPage extends LitElement {
     this.selectedPreset = "daily";
     this.customHour = "9";
     this.customMinute = "0";
+    this.selectedWeekdays = [1];
+    this.selectedMonthDay = "1";
+    this.customCron = "";
   }
 
   openEdit(job: any) {
@@ -235,48 +252,97 @@ export class CronPage extends LitElement {
   }
 
   private parseCronExpression(expr: string) {
-    const parts = expr.split(" ");
+    const parts = expr.trim().split(/\s+/);
     if (parts.length < 5) {
       this.selectedPreset = "daily";
       this.customHour = "9";
       this.customMinute = "0";
       return;
     }
-    const [m, h, dom, mon, dow] = parts;
-
-    // Detect preset type
-    if (expr === "* * * * *") {
-      this.selectedPreset = "minutely";
-    } else if (expr === "0 * * * *") {
-      this.selectedPreset = "hourly";
-    } else if (dom === "*" && dow === "*") {
-      this.selectedPreset = "daily";
-    } else if (dom === "*" && dow === "1") {
-      this.selectedPreset = "weekly";
-    } else if (dom === "1" && dow === "*") {
-      this.selectedPreset = "monthly";
-    } else {
-      this.selectedPreset = "daily";
-    }
+    const [m, h, dom, , dow] = parts;
 
     // Parse time
     this.customMinute = m === "*" ? "0" : m;
     this.customHour = h === "*" ? "0" : h;
+
+    // Detect preset type
+    if (expr.trim() === "* * * * *") {
+      this.selectedPreset = "minutely";
+    } else if (dom === "*" && dow === "*" && h === "*") {
+      this.selectedPreset = "hourly";
+    } else if (dom === "*" && dow === "*") {
+      this.selectedPreset = "daily";
+    } else if (dom === "*" && dow !== "*") {
+      this.selectedPreset = "weekly";
+      this.selectedWeekdays = dow.split(",").map(d => parseInt(d)).filter(d => !isNaN(d));
+      if (this.selectedWeekdays.length === 0) this.selectedWeekdays = [1];
+    } else if (dom !== "*" && dow === "*") {
+      this.selectedPreset = "monthly";
+      this.selectedMonthDay = dom;
+    } else {
+      // Complex expression — use custom mode to preserve it
+      this.selectedPreset = "custom";
+      this.customCron = expr;
+    }
   }
 
   private buildSchedule(): string {
-    const preset = CRON_PRESETS.find(p => p.value === this.selectedPreset);
-    if (!preset) return `0 9 * * *`;
-
-    // Minutely and hourly use fixed cron
-    if (this.selectedPreset === "minutely" || this.selectedPreset === "hourly") {
-      return preset.cron;
-    }
-
-    // Others: substitute time placeholders
     const h = this.customHour || "0";
     const m = this.customMinute || "0";
-    return preset.cron.replace("{h}", h).replace("{m}", m);
+    switch (this.selectedPreset) {
+      case "minutely": return "* * * * *";
+      case "hourly": return "0 * * * *";
+      case "daily": return `${m} ${h} * * *`;
+      case "weekly": {
+        const days = this.selectedWeekdays.length > 0
+          ? [...this.selectedWeekdays].sort((a, b) => a - b).join(",")
+          : "1";
+        return `${m} ${h} * * ${days}`;
+      }
+      case "monthly":
+        return `${m} ${h} ${this.selectedMonthDay} * *`;
+      case "custom":
+        return this.customCron || "0 9 * * *";
+      default:
+        return "0 9 * * *";
+    }
+  }
+
+  private toggleWeekday(day: number) {
+    if (this.selectedWeekdays.includes(day)) {
+      // Don't allow deselecting the last day
+      if (this.selectedWeekdays.length > 1) {
+        this.selectedWeekdays = this.selectedWeekdays.filter(d => d !== day);
+      }
+    } else {
+      this.selectedWeekdays = [...this.selectedWeekdays, day];
+    }
+  }
+
+  private describeCron(expr: string): string {
+    const parts = expr.trim().split(/\s+/);
+    if (parts.length < 5) return expr;
+    const [m, h, dom, , dow] = parts;
+
+    if (expr.trim() === "* * * * *") return "Every minute";
+    if (h === "*" && dom === "*" && dow === "*") {
+      return m === "0" ? "Hourly" : `Hourly at :${m.padStart(2, "0")}`;
+    }
+
+    const time = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+
+    if (dom === "*" && dow === "*") return `Daily at ${time}`;
+    if (dom === "*" && dow !== "*") {
+      const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const days = dow.split(",").map(d => dayNames[parseInt(d)] || d).join(", ");
+      return `${days} at ${time}`;
+    }
+    if (dom !== "*" && dow === "*") {
+      const n = parseInt(dom);
+      const s = (n > 3 && n < 21) ? "th" : ["th","st","nd","rd"][n % 10] || "th";
+      return `Monthly ${n}${s} at ${time}`;
+    }
+    return expr;
   }
 
   closeForm() {
@@ -318,7 +384,6 @@ export class CronPage extends LitElement {
 
   private renderModal() {
     const isNew = this.formMode === "new";
-    const needsTime = !["minutely", "hourly"].includes(this.selectedPreset);
     return html`
       <div class="modal-backdrop" @click=${this.closeForm}>
         <div class="modal" @click=${(e: Event) => e.stopPropagation()}>
@@ -345,7 +410,33 @@ export class CronPage extends LitElement {
                 `
               )}
             </div>
-            ${needsTime ? html`
+            ${this.selectedPreset === "weekly" ? html`
+              <div style="margin-bottom:10px">
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600">Repeat on</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                  ${WEEKDAYS.map(d => html`
+                    <button
+                      class="btn btn-sm ${this.selectedWeekdays.includes(d.value) ? "btn-primary" : "btn-ghost"}"
+                      style="min-width:44px"
+                      @click=${() => this.toggleWeekday(d.value)}
+                    >${d.label}</button>
+                  `)}
+                </div>
+              </div>
+            ` : ""}
+            ${this.selectedPreset === "monthly" ? html`
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                <span style="font-size:13px;color:var(--text-secondary)">On day</span>
+                <select
+                  style="width:70px;background:var(--bg-input);border:1px solid var(--border-default);border-radius:var(--r-sm);padding:8px;color:var(--text-primary);font-size:13px"
+                  .value=${this.selectedMonthDay}
+                  @change=${(e: any) => { this.selectedMonthDay = e.target.value; }}
+                >
+                  ${Array.from({ length: 31 }, (_, i) => html`<option value=${i + 1}>${i + 1}</option>`)}
+                </select>
+              </div>
+            ` : ""}
+            ${["daily", "weekly", "monthly"].includes(this.selectedPreset) ? html`
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
                 <span style="font-size:13px;color:var(--text-secondary)">At</span>
                 <select
@@ -363,6 +454,16 @@ export class CronPage extends LitElement {
                 >
                   ${Array.from({ length: 60 }, (_, i) => html`<option value=${i}>${String(i).padStart(2, "0")}</option>`)}
                 </select>
+              </div>
+            ` : ""}
+            ${this.selectedPreset === "custom" ? html`
+              <div style="margin-bottom:10px">
+                <input
+                  style="width:100%;box-sizing:border-box;background:var(--bg-input);border:1px solid var(--border-default);border-radius:var(--r-sm);padding:9px 14px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono)"
+                  .value=${this.customCron}
+                  @input=${(e: any) => { this.customCron = e.target.value; }}
+                  placeholder="0 9 * * 1-5"
+                />
               </div>
             ` : ""}
             <div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono)">
@@ -441,7 +542,8 @@ export class CronPage extends LitElement {
                     <div class="msg-preview">${j.payload?.message}</div>
                   </td>
                   <td>
-                    <div class="job-schedule">${j.schedule?.expr}</div>
+                    <div style="font-size:13px;color:var(--text-primary);font-weight:500">${this.describeCron(j.schedule?.expr || "")}</div>
+                    <div class="job-schedule" style="margin-top:2px">${j.schedule?.expr}</div>
                     ${j.schedule?.tz ? html`<div class="time-info" style="margin-top:2px">${j.schedule.tz}</div>` : ""}
                   </td>
                   <td>
