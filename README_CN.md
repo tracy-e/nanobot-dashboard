@@ -151,6 +151,11 @@ make build && make serve
 
 深色主题，使用 CSS 自定义属性。Plus Jakarta Sans 用于界面文字，JetBrains Mono 用于代码。绿色主色调（`#4ADE80`），橙色高亮点缀。
 
+## TODO
+
+- [ ] 移动端体验优化 — 基础响应式布局已完成，细节待打磨
+- [ ] 自动化测试 — 后端 API + 前端组件 + 端到端
+
 ## 许可证
 
 MIT

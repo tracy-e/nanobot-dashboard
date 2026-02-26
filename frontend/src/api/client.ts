@@ -83,4 +83,10 @@ export const api = {
   getLogFiles: () => request("/api/logs"),
   getLogFile: (name: string, lines = 500) =>
     request(`/api/logs/${encodeURIComponent(name)}?lines=${lines}`),
+
+  // Media
+  getMediaFiles: () => request("/api/media"),
+  mediaUrl: (name: string) => `/api/media/${encodeURIComponent(name)}`,
+  deleteMediaFile: (name: string) =>
+    request(`/api/media/${encodeURIComponent(name)}`, { method: "DELETE" }),
 };

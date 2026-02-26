@@ -18,7 +18,7 @@ export class StatusPage extends LitElement {
 
   static styles = css`
     ${unsafeCSS(hljsStyles)}
-    :host { display: block; }
+    :host { display: flex; flex-direction: column; height: calc(100vh - 64px); }
 
     .page-header {
       display: flex; align-items: center; gap: 14px; margin-bottom: 28px;
@@ -148,11 +148,12 @@ export class StatusPage extends LitElement {
       background: var(--bg-card); border: 1px solid var(--border-subtle);
       border-radius: var(--r-lg); overflow: hidden;
       box-shadow: var(--shadow-card);
+      flex: 1; min-height: 0; display: flex; flex-direction: column;
     }
     .config-json pre {
       background: transparent; border: none;
       padding: 18px 20px; font-size: 12px; line-height: 1.7;
-      max-height: 400px; overflow-y: auto; margin: 0;
+      flex: 1; overflow-y: auto; margin: 0;
     }
     .config-json code { font-family: var(--font-mono); }
     .error { color: var(--red); padding: 12px; }
@@ -238,6 +239,14 @@ export class StatusPage extends LitElement {
     }
     .modal-btn.save:hover { background: #5ee898; }
     .modal-btn.save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    @media (max-width: 768px) {
+      h1 { font-size: 20px; }
+      .grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+      .card { padding: 16px 18px; }
+      .modal { width: 95vw; height: 85vh; }
+      .modal-body textarea { min-height: 200px; }
+    }
   `;
 
   connectedCallback() {

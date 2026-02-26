@@ -137,6 +137,14 @@ export class CronPage extends LitElement {
     }
     .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
     .error { color: var(--red); margin-bottom: 12px; font-size: 13px; }
+
+    @media (max-width: 768px) {
+      h1 { font-size: 20px; }
+      .table-wrap { overflow-x: auto; }
+      td, th { padding: 10px 12px; }
+      .col-next { display: none; }
+      .form-row { flex-direction: column; }
+    }
   `;
 
   connectedCallback() {
@@ -311,7 +319,7 @@ export class CronPage extends LitElement {
               <th>Schedule</th>
               <th>Status</th>
               <th>Last Run</th>
-              <th>Next Run</th>
+              <th class="col-next">Next Run</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -334,7 +342,7 @@ export class CronPage extends LitElement {
                     ${j.state?.lastStatus ? html`<div class="status-text">${j.state.lastStatus}</div>` : ""}
                   </td>
                   <td class="time-info">${this.fmtTime(j.state?.lastRunAtMs)}</td>
-                  <td class="time-info">${this.fmtTime(j.state?.nextRunAtMs)}</td>
+                  <td class="time-info col-next">${this.fmtTime(j.state?.nextRunAtMs)}</td>
                   <td>
                     <div class="actions">
                       <button class="btn btn-sm btn-ghost" @click=${() => this.openEdit(j)}>Edit</button>

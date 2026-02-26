@@ -17,6 +17,7 @@ export class SessionsPage extends LitElement {
   @state() private note = "";
   @state() private editingNote = false;
   @state() private noteDraft = "";
+  @state() private mobileShowDetail = false;
 
   static styles = css`
     ${unsafeCSS(hljsStyles)}
@@ -228,6 +229,25 @@ export class SessionsPage extends LitElement {
     .md-content img { max-width: 100%; border-radius: var(--r-sm); }
     .md-content hr { border: none; border-top: 1px solid var(--border-default); margin: 8px 0; }
 
+    .back-btn {
+      display: none; padding: 6px 14px; background: transparent;
+      color: var(--text-secondary); border: 1px solid var(--border-default);
+      border-radius: var(--r-sm); cursor: pointer; font-size: 12px;
+      font-weight: 500; font-family: var(--font-sans);
+      transition: all 0.15s var(--ease); margin-right: 8px;
+    }
+    .back-btn:hover { color: var(--text-primary); background: var(--bg-hover); }
+
+    @media (max-width: 768px) {
+      h1 { font-size: 20px; }
+      .layout { flex-direction: column; height: auto; min-height: calc(100vh - 110px); }
+      .list-panel { width: 100%; max-height: 100%; flex-shrink: 0; }
+      .detail-panel { flex: 1; min-height: 60vh; }
+      .list-panel.hidden { display: none; }
+      .detail-panel.hidden { display: none; }
+      .back-btn { display: inline-block; }
+      .messages-container { padding: 12px 14px; }
+    }
     .msg-text { white-space: pre-wrap; }
     .msg-time {
       font-size: 10px; color: var(--text-muted); margin-top: 4px; padding: 0 4px;
@@ -276,10 +296,15 @@ export class SessionsPage extends LitElement {
     }
   }
 
+  private goBackToList() {
+    this.mobileShowDetail = false;
+  }
+
   async selectSession(s: any) {
     this.selected = s;
     this.loading = true;
     this.editingNote = false;
+    this.mobileShowDetail = true;
     try {
       const res = await api.getSession(s.key);
       this.messages = res.messages || [];
@@ -491,7 +516,7 @@ export class SessionsPage extends LitElement {
       </div>
       ${this.error ? html`<div class="error">${this.error}</div>` : ""}
       <div class="layout">
-        <div class="list-panel">
+        <div class="list-panel ${this.mobileShowDetail ? "hidden" : ""}">
           <div class="filters">
             ${this.channels.map(
               (ch) => html`
@@ -512,14 +537,17 @@ export class SessionsPage extends LitElement {
             }
           </div>
         </div>
-        <div class="detail-panel">
+        <div class="detail-panel ${!this.mobileShowDetail ? "hidden" : ""}">
           ${!this.selected
             ? html`<div class="empty">Select a session to view</div>`
             : this.loading
             ? html`<div class="empty">Loading...</div>`
             : html`
                 <div class="detail-header">
-                  <h2>${this.selected.metadataKey || this.selected.key}</h2>
+                  <div style="display:flex;align-items:center;min-width:0">
+                    <button class="back-btn" @click=${this.goBackToList}>← Back</button>
+                    <h2 style="margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${this.selected.metadataKey || this.selected.key}</h2>
+                  </div>
                   <button class="delete-btn" @click=${this.deleteSession}>Delete</button>
                 </div>
                 <div class="note-bar">

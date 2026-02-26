@@ -203,6 +203,15 @@ export abstract class FileViewer extends LitElement {
     .actions { display: flex; gap: 8px; }
     .empty { color: var(--text-muted); text-align: center; padding: 48px; font-size: 13px; }
     .error { color: var(--red); margin-bottom: 12px; font-size: 13px; }
+
+    @media (max-width: 768px) {
+      h1 { font-size: 20px; }
+      .layout { flex-direction: column; height: auto; min-height: calc(100vh - 110px); }
+      .tree-panel { width: 100%; max-height: 40vh; flex-shrink: 0; }
+      .content-panel { flex: 1; min-height: 50vh; }
+      .editor-area { min-height: 200px; }
+      .content-body { padding: 14px 16px; }
+    }
   `;
 
   connectedCallback() {

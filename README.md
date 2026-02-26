@@ -151,6 +151,11 @@ All paths relative to `NANOBOT_ROOT`:
 
 Dark theme with CSS custom properties, inspired by modern dashboard aesthetics. Plus Jakarta Sans for UI text, JetBrains Mono for code. Green accent (`#4ADE80`) with orange highlights.
 
+## TODO
+
+- [ ] Mobile UX polish — basic responsive layout done, details need refinement
+- [ ] Automated tests — backend API + frontend component + e2e
+
 ## License
 
 MIT

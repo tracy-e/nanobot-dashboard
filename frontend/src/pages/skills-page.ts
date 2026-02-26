@@ -16,6 +16,7 @@ export class SkillsPage extends LitElement {
   @state() private error = "";
   @state() private refreshing = false;
   @state() private saving = false;
+  @state() private mobileShowDetail = false;
 
   static styles = css`
     ${unsafeCSS(hljsStyles)}
@@ -160,6 +161,30 @@ export class SkillsPage extends LitElement {
     .btn-danger:hover { background: var(--red-soft); }
     .empty { color: var(--text-muted); text-align: center; padding: 48px; font-size: 13px; }
     .error { color: var(--red); margin-bottom: 12px; font-size: 13px; }
+
+    .back-btn {
+      display: none; padding: 6px 14px; background: transparent;
+      color: var(--text-secondary); border: 1px solid var(--border-default);
+      border-radius: var(--r-sm); cursor: pointer; font-size: 12px;
+      font-weight: 500; font-family: var(--font-sans);
+      transition: all 0.15s var(--ease); margin-right: 8px;
+    }
+    .back-btn:hover { color: var(--text-primary); background: var(--bg-hover); }
+
+    @media (max-width: 768px) {
+      h1 { font-size: 20px; }
+      .layout { flex-direction: column; height: auto; min-height: calc(100vh - 110px); }
+      .list-panel { width: 100%; max-height: 100%; flex-shrink: 0; }
+      .detail-panel { flex: 1; min-height: 60vh; }
+      .list-panel.hidden { display: none; }
+      .detail-panel.hidden { display: none; }
+      .back-btn { display: inline-block; }
+      .detail-body { padding: 14px 16px; }
+      .editor-area { min-height: 200px; }
+      .detail-header { flex-wrap: wrap; gap: 8px; }
+      .detail-header-left { flex-wrap: wrap; }
+      .file-tabs { flex-wrap: wrap; }
+    }
     .stat {
       color: var(--text-muted); font-size: 12px; font-weight: 600;
       padding: 10px 16px; border-bottom: 1px solid var(--border-subtle);
@@ -187,9 +212,14 @@ export class SkillsPage extends LitElement {
     }
   }
 
+  private goBackToList() {
+    this.mobileShowDetail = false;
+  }
+
   async selectSkill(s: any) {
     this.selected = s;
     this.editing = false;
+    this.mobileShowDetail = true;
     const defaultFile = s.files.includes("SKILL.md") ? "SKILL.md" : s.files[0];
     if (defaultFile) {
       await this.loadFile(s.id, defaultFile);
@@ -260,7 +290,7 @@ export class SkillsPage extends LitElement {
       </div>
       ${this.error ? html`<div class="error">${this.error}</div>` : ""}
       <div class="layout">
-        <div class="list-panel">
+        <div class="list-panel ${this.mobileShowDetail ? "hidden" : ""}">
           <div class="stat">${this.skills.length} skills</div>
           ${this.skills.map(
             (s) => html`
@@ -279,12 +309,13 @@ export class SkillsPage extends LitElement {
             `
           )}
         </div>
-        <div class="detail-panel">
+        <div class="detail-panel ${!this.mobileShowDetail ? "hidden" : ""}">
           ${!this.selected
             ? html`<div class="empty">Select a skill to view</div>`
             : html`
                 <div class="detail-header">
                   <div class="detail-header-left">
+                    <button class="back-btn" @click=${this.goBackToList}>← Back</button>
                     <h2>${this.selected.name}</h2>
                     <div class="file-tabs">
                       ${this.selected.files.map(
