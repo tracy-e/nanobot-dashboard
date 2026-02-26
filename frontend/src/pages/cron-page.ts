@@ -109,40 +109,30 @@ export class CronPage extends LitElement {
     }
     .time-info { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); }
 
-    /* Form */
-    .form-card {
-      background: var(--bg-card); border: 1px solid var(--border-subtle);
-      border-radius: var(--r-lg); padding: 24px; margin-bottom: 18px;
-      box-shadow: var(--shadow-card);
+    /* Modal */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      z-index: 200; display: flex; align-items: center; justify-content: center;
     }
-    .form-title {
+    .modal {
+      background: var(--bg-card); border: 1px solid var(--border-subtle);
+      border-radius: var(--r-lg); padding: 24px; width: 90vw; max-width: 520px;
+      max-height: 85vh; overflow-y: auto; box-shadow: 0 8px 48px rgba(0,0,0,0.4);
+    }
+    .modal-title {
       font-size: 14px; color: var(--text-primary); font-weight: 700;
       margin-bottom: 18px; letter-spacing: -0.3px;
     }
-    .form-row { display: flex; gap: 14px; margin-bottom: 14px; align-items: end; }
-    .form-group { display: flex; flex-direction: column; gap: 5px; }
-    .form-group label {
-      font-size: 11px; color: var(--text-muted); text-transform: uppercase;
-      letter-spacing: 0.5px; font-weight: 600;
-    }
-    .form-group input, .form-group textarea {
-      background: var(--bg-input); border: 1px solid var(--border-default);
-      border-radius: var(--r-sm); padding: 9px 14px; color: var(--text-primary);
-      font-size: 13px; font-family: var(--font-sans);
-      transition: border-color 0.15s var(--ease);
-    }
-    .form-group textarea { min-height: 64px; resize: vertical; }
-    .form-group input:focus, .form-group textarea:focus {
-      outline: none; border-color: var(--green);
-    }
-    .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
+
     .error { color: var(--red); margin-bottom: 12px; font-size: 13px; }
 
     @media (max-width: 768px) {
       h1 { font-size: 20px; }
-      .table-wrap { overflow-x: auto; }
+      .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      table { min-width: 700px; }
       td, th { padding: 10px 12px; }
       .col-next { display: none; }
+      .modal { width: 95vw; padding: 18px; }
       .form-row { flex-direction: column; }
     }
   `;
@@ -243,52 +233,54 @@ export class CronPage extends LitElement {
     this.formData = { ...this.formData, [field]: value };
   }
 
-  private renderForm() {
+  private renderModal() {
     const isNew = this.formMode === "new";
     return html`
-      <div class="form-card">
-        <div class="form-title">${isNew ? "New Job" : "Edit Job"}</div>
-        <div class="form-row">
-          <div class="form-group" style="flex:1">
-            <label>Name</label>
-            <input .value=${this.formData.name}
-              @input=${(e: any) => this.updateField("name", e.target.value)}
-              placeholder="my-task" />
-          </div>
-          <div class="form-group" style="flex:1">
-            <label>Schedule (cron)</label>
-            <input .value=${this.formData.schedule}
-              @input=${(e: any) => this.updateField("schedule", e.target.value)}
-              placeholder="0 9 * * *" />
-          </div>
-        </div>
-        <div class="form-group" style="margin-bottom:14px">
-          <label>Message</label>
-          <textarea .value=${this.formData.message}
-            @input=${(e: any) => this.updateField("message", e.target.value)}
-            placeholder="Task message..."></textarea>
-        </div>
-        ${isNew ? html`
+      <div class="modal-backdrop" @click=${this.closeForm}>
+        <div class="modal" @click=${(e: Event) => e.stopPropagation()}>
+          <div class="modal-title">${isNew ? "New Job" : "Edit Job"}</div>
           <div class="form-row">
             <div class="form-group">
-              <label>Channel</label>
-              <input .value=${this.formData.channel}
-                @input=${(e: any) => this.updateField("channel", e.target.value)}
-                placeholder="discord" />
+              <label>Name</label>
+              <input .value=${this.formData.name}
+                @input=${(e: any) => this.updateField("name", e.target.value)}
+                placeholder="my-task" />
             </div>
             <div class="form-group">
-              <label>To</label>
-              <input .value=${this.formData.to}
-                @input=${(e: any) => this.updateField("to", e.target.value)}
-                placeholder="channel ID" />
+              <label>Schedule (cron)</label>
+              <input .value=${this.formData.schedule}
+                @input=${(e: any) => this.updateField("schedule", e.target.value)}
+                placeholder="0 9 * * *" />
             </div>
           </div>
-        ` : ""}
-        <div class="form-actions">
-          <button class="btn btn-ghost btn-sm" @click=${this.closeForm}>Cancel</button>
-          <button class="btn btn-primary btn-sm" @click=${this.submitForm}>
-            ${isNew ? "Create" : "Save"}
-          </button>
+          <div class="form-group" style="margin-bottom:14px">
+            <label>Message</label>
+            <textarea .value=${this.formData.message}
+              @input=${(e: any) => this.updateField("message", e.target.value)}
+              placeholder="Task message..."></textarea>
+          </div>
+          ${isNew ? html`
+            <div class="form-row">
+              <div class="form-group">
+                <label>Channel</label>
+                <input .value=${this.formData.channel}
+                  @input=${(e: any) => this.updateField("channel", e.target.value)}
+                  placeholder="discord" />
+              </div>
+              <div class="form-group">
+                <label>To</label>
+                <input .value=${this.formData.to}
+                  @input=${(e: any) => this.updateField("to", e.target.value)}
+                  placeholder="channel ID" />
+              </div>
+            </div>
+          ` : ""}
+          <div class="form-actions">
+            <button class="btn btn-ghost btn-sm" @click=${this.closeForm}>Cancel</button>
+            <button class="btn btn-primary btn-sm" @click=${this.submitForm}>
+              ${isNew ? "Create" : "Save"}
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -309,7 +301,7 @@ export class CronPage extends LitElement {
           : ""}
       </div>
 
-      ${this.formMode !== null ? this.renderForm() : ""}
+      ${this.formMode !== null ? this.renderModal() : ""}
 
       <div class="table-wrap">
         <table>
