@@ -1,7 +1,7 @@
 """Workspace file viewer/editor endpoints.
 
-Serves workspace root files (SOUL.md, AGENTS.md, etc.),
-memory/ subdirectory, knowledge/ (symlink), and heartbeat/.
+Dynamically discovers all subdirectories under workspace/,
+excluding sessions/ and skills/ (they have dedicated pages).
 Uses os.walk(followlinks=True) to correctly traverse symlinked dirs.
 """
 
@@ -45,12 +45,16 @@ def _walk_dir(base: Path, group: str) -> list[dict]:
 
 
 def _scan_files():
-    """Scan workspace for viewable files, organized by group."""
+    """Scan workspace for viewable files, organized by group.
+
+    Dynamically discovers all subdirectories, excluding sessions/ and skills/.
+    Special handling: memory/knowledge/ gets its own "knowledge" group.
+    """
     files = []
     if not WORKSPACE_DIR.exists():
         return files
 
-    # Workspace root .md files (non-recursive)
+    # Workspace root files (non-recursive)
     for f in sorted(WORKSPACE_DIR.glob("*.md")):
         if not f.name.startswith("."):
             files.append({
@@ -60,28 +64,30 @@ def _scan_files():
                 "group": "workspace",
             })
 
-    # memory/ tree — exclude knowledge/ subdir (it gets its own group)
-    memory_dir = WORKSPACE_DIR / "memory"
-    if memory_dir.exists():
-        for dirpath, dirnames, filenames in os.walk(str(memory_dir), followlinks=True):
-            # Skip knowledge/ — handled separately
-            dirnames[:] = [d for d in dirnames if d != "knowledge" and not d.startswith(".") and d not in SKIP_DIRS]
-            for fname in sorted(filenames):
-                fp = Path(dirpath) / fname
-                if fp.suffix in ALLOWED_EXTENSIONS and not fname.startswith("."):
-                    rel = os.path.relpath(str(fp), str(WORKSPACE_DIR))
-                    files.append({
-                        "path": rel,
-                        "name": fname,
-                        "sizeBytes": fp.stat().st_size,
-                        "group": "memory",
-                    })
+    # Enumerate all subdirectories dynamically
+    for entry in sorted(WORKSPACE_DIR.iterdir()):
+        if not entry.is_dir() or entry.name.startswith(".") or entry.name in SKIP_DIRS:
+            continue
 
-    # knowledge/ (symlink under memory/)
-    files.extend(_walk_dir(memory_dir / "knowledge", "knowledge"))
-
-    # heartbeat/
-    files.extend(_walk_dir(WORKSPACE_DIR / "heartbeat", "heartbeat"))
+        if entry.name == "memory":
+            # memory/ tree — exclude knowledge/ subdir (it gets its own group)
+            for dirpath, dirnames, filenames in os.walk(str(entry), followlinks=True):
+                dirnames[:] = [d for d in dirnames if d != "knowledge" and not d.startswith(".") and d not in SKIP_DIRS]
+                for fname in sorted(filenames):
+                    fp = Path(dirpath) / fname
+                    if fp.suffix in ALLOWED_EXTENSIONS and not fname.startswith("."):
+                        rel = os.path.relpath(str(fp), str(WORKSPACE_DIR))
+                        files.append({
+                            "path": rel,
+                            "name": fname,
+                            "sizeBytes": fp.stat().st_size,
+                            "group": "memory",
+                        })
+            # knowledge/ (symlink under memory/)
+            files.extend(_walk_dir(entry / "knowledge", "knowledge"))
+        else:
+            # Generic subdirectory → group = directory name
+            files.extend(_walk_dir(entry, entry.name))
 
     return files
 
@@ -137,7 +143,26 @@ async def update_file(request: web.Request) -> web.Response:
     })
 
 
+async def delete_file(request: web.Request) -> web.Response:
+    path = request.match_info["path"]
+    try:
+        filepath = safe_resolve(WORKSPACE_DIR, path)
+    except ValueError:
+        raise web.HTTPForbidden(text="Path traversal detected")
+
+    if not filepath.exists() or not filepath.is_file():
+        raise web.HTTPNotFound(text="File not found")
+
+    if filepath.suffix not in ALLOWED_EXTENSIONS:
+        raise web.HTTPBadRequest(text=f"File type {filepath.suffix} not allowed")
+
+    filepath.unlink()
+
+    return web.json_response({"path": path, "deleted": True})
+
+
 def setup(app: web.Application):
     app.router.add_get("/api/memory/files", list_files)
     app.router.add_get(r"/api/memory/files/{path:.+}", get_file)
     app.router.add_put(r"/api/memory/files/{path:.+}", update_file)
+    app.router.add_delete(r"/api/memory/files/{path:.+}", delete_file)

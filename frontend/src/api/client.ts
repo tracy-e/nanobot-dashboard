@@ -60,6 +60,8 @@ export const api = {
       method: "PUT",
       body: JSON.stringify({ content }),
     }),
+  deleteMemoryFile: (path: string) =>
+    request(`/api/memory/files/${encodeURIComponent(path)}`, { method: "DELETE" }),
 
   // Skills
   getSkills: () => request("/api/skills"),

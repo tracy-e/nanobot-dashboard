@@ -90,7 +90,7 @@ export class NanoApp extends LitElement {
         ${this.page === "status" ? html`<status-page></status-page>` : ""}
         ${this.page === "sessions" ? html`<sessions-page></sessions-page>` : ""}
         ${this.page === "cron" ? html`<cron-page></cron-page>` : ""}
-        ${this.page === "memory" ? html`<memory-page></memory-page>` : ""}
+        ${this.page === "workspace" ? html`<memory-page></memory-page>` : ""}
         ${this.page === "knowledge" ? html`<knowledge-page></knowledge-page>` : ""}
         ${this.page === "skills" ? html`<skills-page></skills-page>` : ""}
         ${this.page === "media" ? html`<media-page></media-page>` : ""}
