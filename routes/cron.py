@@ -131,22 +131,14 @@ async def run_job(request: web.Request) -> web.Response:
         raise web.HTTPNotFound(text="Job not found")
 
     try:
-        proc = await asyncio.create_subprocess_exec(
+        await asyncio.create_subprocess_exec(
             "nanobot", "cron", "run", job_id,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
         )
-        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=10)
         return web.json_response({
             "triggered": job_id,
-            "returncode": proc.returncode or 0,
-            "stdout": stdout.decode(errors="replace"),
-            "stderr": stderr.decode(errors="replace"),
-        })
-    except asyncio.TimeoutError:
-        return web.json_response({
-            "triggered": job_id,
-            "note": "Command started but timed out waiting for output (job may still be running)",
+            "note": "Job triggered successfully",
         })
     except FileNotFoundError:
         raise web.HTTPServiceUnavailable(text="nanobot CLI not found")
