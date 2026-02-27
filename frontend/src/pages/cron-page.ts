@@ -219,7 +219,7 @@ export class CronPage extends LitElement {
   async runJob(job: any) {
     try {
       const res = await api.runCronJob(job.id);
-      alert(res.note || `Triggered. Return code: ${res.returncode}`);
+      alert(res.note || "Job triggered");
       await this.load();
     } catch (e: any) { this.error = e.message; }
   }
@@ -533,7 +533,10 @@ export class CronPage extends LitElement {
               (j) => html`
                 <tr>
                   <td>
-                    <div class="job-name">${j.name}</div>
+                    <div>
+                      <span class="job-name">${j.name}</span>
+                      <span style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);background:var(--bg-surface);padding:1px 6px;border-radius:4px;border:1px solid var(--border-subtle);margin-left:6px;vertical-align:middle">${j.id}</span>
+                    </div>
                     <div class="msg-preview">${j.payload?.message}</div>
                   </td>
                   <td>
