@@ -100,10 +100,10 @@ export class CronPage extends LitElement {
     /* Table */
     .table-wrap {
       background: var(--bg-card); border: 1px solid var(--border-subtle);
-      border-radius: var(--r-lg); overflow: hidden;
+      border-radius: var(--r-lg); overflow-x: auto; -webkit-overflow-scrolling: touch;
       box-shadow: var(--shadow-card);
     }
-    table { width: 100%; border-collapse: collapse; }
+    table { width: 100%; border-collapse: collapse; min-width: 700px; }
     th {
       text-align: left; padding: 14px 18px; font-size: 11px;
       text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600;
@@ -131,7 +131,8 @@ export class CronPage extends LitElement {
     .actions { display: flex; gap: 6px; flex-wrap: wrap; }
     .msg-preview {
       max-width: 280px; overflow: hidden; text-overflow: ellipsis;
-      white-space: nowrap; color: var(--text-muted); font-size: 12px; margin-top: 3px;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      color: var(--text-muted); font-size: 12px; margin-top: 3px;
     }
     .time-info { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); }
 
@@ -173,8 +174,6 @@ export class CronPage extends LitElement {
 
     @media (max-width: 768px) {
       h1 { font-size: 20px; }
-      .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-      table { min-width: 700px; }
       td, th { padding: 10px 12px; }
       .col-next { display: none; }
       .modal { width: 95vw; padding: 18px; }
@@ -366,6 +365,7 @@ export class CronPage extends LitElement {
       } else {
         await api.updateCronJob(this.formMode!, {
           name: d.name, schedule, message: d.message,
+          channel: d.channel || null, to: d.to || null,
         });
       }
       this.closeForm();
@@ -429,10 +429,9 @@ export class CronPage extends LitElement {
                 <span style="font-size:13px;color:var(--text-secondary)">On day</span>
                 <select
                   style="width:70px;background:var(--bg-input);border:1px solid var(--border-default);border-radius:var(--r-sm);padding:8px;color:var(--text-primary);font-size:13px"
-                  .value=${this.selectedMonthDay}
                   @change=${(e: any) => { this.selectedMonthDay = e.target.value; }}
                 >
-                  ${Array.from({ length: 31 }, (_, i) => html`<option value=${i + 1}>${i + 1}</option>`)}
+                  ${Array.from({ length: 31 }, (_, i) => html`<option value=${i + 1} ?selected=${String(i + 1) === this.selectedMonthDay}>${i + 1}</option>`)}
                 </select>
               </div>
             ` : ""}
@@ -441,18 +440,16 @@ export class CronPage extends LitElement {
                 <span style="font-size:13px;color:var(--text-secondary)">At</span>
                 <select
                   style="width:70px;background:var(--bg-input);border:1px solid var(--border-default);border-radius:var(--r-sm);padding:8px;color:var(--text-primary);font-size:13px"
-                  .value=${this.customHour}
                   @change=${(e: any) => { this.customHour = e.target.value; }}
                 >
-                  ${Array.from({ length: 24 }, (_, i) => html`<option value=${i}>${String(i).padStart(2, "0")}</option>`)}
+                  ${Array.from({ length: 24 }, (_, i) => html`<option value=${i} ?selected=${String(i) === this.customHour}>${String(i).padStart(2, "0")}</option>`)}
                 </select>
                 <span style="font-size:13px;color:var(--text-secondary)">:</span>
                 <select
                   style="width:70px;background:var(--bg-input);border:1px solid var(--border-default);border-radius:var(--r-sm);padding:8px;color:var(--text-primary);font-size:13px"
-                  .value=${this.customMinute}
                   @change=${(e: any) => { this.customMinute = e.target.value; }}
                 >
-                  ${Array.from({ length: 60 }, (_, i) => html`<option value=${i}>${String(i).padStart(2, "0")}</option>`)}
+                  ${Array.from({ length: 60 }, (_, i) => html`<option value=${i} ?selected=${String(i) === this.customMinute}>${String(i).padStart(2, "0")}</option>`)}
                 </select>
               </div>
             ` : ""}
@@ -477,22 +474,20 @@ export class CronPage extends LitElement {
               @input=${(e: any) => this.updateField("message", e.target.value)}
               placeholder="Task message..."></textarea>
           </div>
-          ${isNew ? html`
-            <div class="form-row">
-              <div class="form-group">
-                <label>Channel</label>
-                <input .value=${this.formData.channel}
-                  @input=${(e: any) => this.updateField("channel", e.target.value)}
-                  placeholder="discord" />
-              </div>
-              <div class="form-group">
-                <label>To</label>
-                <input .value=${this.formData.to}
-                  @input=${(e: any) => this.updateField("to", e.target.value)}
-                  placeholder="channel ID" />
-              </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Channel</label>
+              <input .value=${this.formData.channel}
+                @input=${(e: any) => this.updateField("channel", e.target.value)}
+                placeholder="discord" />
             </div>
-          ` : ""}
+            <div class="form-group">
+              <label>To</label>
+              <input .value=${this.formData.to}
+                @input=${(e: any) => this.updateField("to", e.target.value)}
+                placeholder="channel ID" />
+            </div>
+          </div>
           <div class="form-actions">
             <button class="btn btn-ghost btn-sm" @click=${this.closeForm}>Cancel</button>
             <button class="btn btn-primary btn-sm" @click=${this.submitForm}>

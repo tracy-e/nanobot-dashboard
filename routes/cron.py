@@ -111,6 +111,10 @@ async def update_job(request: web.Request) -> web.Response:
         job["schedule"]["expr"] = body["schedule"]
     if "message" in body:
         job["payload"]["message"] = body["message"]
+    if "channel" in body:
+        job["payload"]["channel"] = body["channel"] or None
+    if "to" in body:
+        job["payload"]["to"] = body["to"] or None
 
     job["updatedAtMs"] = int(time.time() * 1000)
     _lock_and_write(data)

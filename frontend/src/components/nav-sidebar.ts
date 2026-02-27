@@ -137,8 +137,8 @@ export class NavSidebar extends LitElement {
     // Cron — clock with hands
     cron: svg`<circle cx="9" cy="9" r="7"/>
               <path d="M9 5v4l2.5 2.5"/>`,
-    // Memory — chip/brain
-    memory: svg`<rect x="4" y="4" width="10" height="10" rx="1.5"/>
+    // Workspace — folder/files
+    workspace: svg`<rect x="4" y="4" width="10" height="10" rx="1.5"/>
                 <path d="M7 4V2m4 2V2M7 14v2m4-2v2M4 7H2m2 4H2m14-4h-2m2 4h-2"/>
                 <circle cx="9" cy="9" r="1.5"/>`,
     // Knowledge — open book
@@ -159,7 +159,7 @@ export class NavSidebar extends LitElement {
     { id: "status", label: "Status" },
     { id: "sessions", label: "Sessions" },
     { id: "cron", label: "Cron Jobs" },
-    { id: "memory", label: "Memory" },
+    { id: "workspace", label: "Workspace" },
     { id: "knowledge", label: "Knowledge" },
     { id: "skills", label: "Skills" },
     { id: "media", label: "Media" },

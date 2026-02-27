@@ -11,8 +11,8 @@ import hljsStyles from "highlight.js/styles/github-dark.css?inline";
 
 export abstract class FileViewer extends LitElement {
   abstract readonly pageTitle: string;
-  abstract readonly groups: string[];
-  abstract readonly groupLabels: Record<string, string>;
+  abstract groups: string[];
+  abstract groupLabels: Record<string, string>;
 
   @state() protected files: any[] = [];
   @state() protected selectedPath = "";
@@ -79,25 +79,33 @@ export abstract class FileViewer extends LitElement {
       position: sticky; top: 0; z-index: 1;
     }
     .tree-dir {
-      padding: 6px 16px 6px 18px; font-size: 12px; font-weight: 500;
-      color: var(--text-muted); cursor: pointer; user-select: none;
+      padding: 6px 16px 6px 16px; font-size: 12px; font-weight: 600;
+      color: var(--text-secondary); cursor: pointer; user-select: none;
       display: flex; align-items: center; gap: 6px;
       transition: color 0.12s var(--ease);
     }
-    .tree-dir:hover { color: var(--text-secondary); }
+    .tree-dir:hover { color: var(--text-primary); }
     .tree-dir .chevron {
       font-size: 10px; transition: transform 0.15s var(--ease);
       display: inline-block; width: 12px; text-align: center;
     }
     .tree-dir .chevron.collapsed { transform: rotate(-90deg); }
+    .tree-dir .dir-icon { font-size: 13px; opacity: 0.7; }
+
+    /* Directory children container — tree guide line */
+    .dir-children {
+      margin-left: 22px;
+      border-left: 1px solid var(--border-default);
+    }
+    .dir-children .tree-item { padding-left: 14px; }
+    .dir-children .tree-item.active { border-left: 2px solid var(--green); }
 
     .tree-item {
-      padding: 8px 16px 8px 36px; font-size: 13px; cursor: pointer;
+      padding: 8px 16px 8px 16px; font-size: 13px; cursor: pointer;
       color: var(--text-secondary); border-bottom: 1px solid var(--border-subtle);
       transition: all 0.12s var(--ease); display: flex;
       justify-content: space-between; align-items: center;
     }
-    .tree-item.root { padding-left: 16px; }
     .tree-item:hover { background: var(--bg-elevated); color: var(--text-primary); }
     .tree-item.active {
       background: var(--bg-elevated);
@@ -196,6 +204,8 @@ export abstract class FileViewer extends LitElement {
     }
     .btn-edit { background: transparent; color: var(--blue); border-color: var(--blue-soft); }
     .btn-edit:hover { background: var(--blue-soft); }
+    .btn-delete { background: transparent; color: var(--red); border-color: var(--red-soft); }
+    .btn-delete:hover { background: var(--red-soft); }
     .btn-save { background: var(--green); color: #fff; border-color: var(--green); }
     .btn-save:hover { background: var(--green-dim); box-shadow: 0 0 12px rgba(74,222,128,0.2); }
     .btn-cancel { background: transparent; color: var(--text-muted); }
@@ -258,6 +268,20 @@ export abstract class FileViewer extends LitElement {
   }
 
   cancelEdit() { this.editing = false; }
+
+  async deleteFile() {
+    const name = this.selectedPath.split("/").pop() || this.selectedPath;
+    if (!confirm(`Delete "${name}"?`)) return;
+    try {
+      await api.deleteMemoryFile(this.selectedPath);
+      this.selectedPath = "";
+      this.content = "";
+      this.editing = false;
+      await this.load();
+    } catch (e: any) {
+      this.error = e.message;
+    }
+  }
 
   async saveEdit() {
     this.saving = true;
@@ -389,26 +413,28 @@ export abstract class FileViewer extends LitElement {
                 ${subs.map((sub) => {
                   const dirKey = `${g}/${sub.dir}`;
                   const isCollapsed = this.collapsedDirs.has(dirKey);
+                  const fileItems = sub.files.map(
+                    (f: any) => html`
+                      <div
+                        class="tree-item ${this.selectedPath === f.path ? "active" : ""}"
+                        @click=${() => this.selectFile(f.path)}
+                      >
+                        <span class="path">${f.name}</span>
+                        <span class="size">${this.formatSize(f.sizeBytes)}</span>
+                      </div>
+                    `
+                  );
                   return html`
                     ${sub.dir
-                      ? html`<div class="tree-dir" @click=${() => this.toggleDir(dirKey)}>
-                          <span class="chevron ${isCollapsed ? "collapsed" : ""}">▾</span>
-                          ${sub.dir}/
-                        </div>`
-                      : ""}
-                    ${!sub.dir || !isCollapsed
-                      ? sub.files.map(
-                          (f: any) => html`
-                            <div
-                              class="tree-item ${!sub.dir && g === "workspace" ? "root" : ""} ${this.selectedPath === f.path ? "active" : ""}"
-                              @click=${() => this.selectFile(f.path)}
-                            >
-                              <span class="path">${f.name}</span>
-                              <span class="size">${this.formatSize(f.sizeBytes)}</span>
-                            </div>
-                          `
-                        )
-                      : ""}
+                      ? html`
+                          <div class="tree-dir" @click=${() => this.toggleDir(dirKey)}>
+                            <span class="chevron ${isCollapsed ? "collapsed" : ""}">▾</span>
+                            <span class="dir-icon">📁</span>
+                            ${sub.dir}/
+                          </div>
+                          ${!isCollapsed ? html`<div class="dir-children">${fileItems}</div>` : ""}
+                        `
+                      : fileItems}
                   `;
                 })}
               `;
@@ -429,7 +455,10 @@ export abstract class FileViewer extends LitElement {
                             ${this.saving ? "Saving..." : "Save"}
                           </button>
                         `
-                      : html`<button class="btn btn-edit" @click=${this.startEdit}>Edit</button>`}
+                      : html`
+                          <button class="btn btn-delete" @click=${this.deleteFile}>Delete</button>
+                          <button class="btn btn-edit" @click=${this.startEdit}>Edit</button>
+                        `}
                   </div>
                 </div>
                 <div class="content-body">
