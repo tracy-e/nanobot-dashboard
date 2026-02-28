@@ -30,6 +30,9 @@ hljs.registerLanguage("css", css);
 
 const marked = new Marked({
   renderer: {
+    link({ href, text }: { href: string; text: string }) {
+      return `<a href="${href}" target="_blank" rel="noopener noreferrer">${text}</a>`;
+    },
     code({ text, lang }: { text: string; lang?: string }) {
       const language = lang && hljs.getLanguage(lang) ? lang : undefined;
       const highlighted = language
