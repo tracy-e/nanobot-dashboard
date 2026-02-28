@@ -274,9 +274,19 @@ export class SkillsPage extends LitElement {
     try {
       const res = await api.getSkillFile(skillId, filename);
       this.fileContent = res.content;
+      window.dispatchEvent(new CustomEvent("dashboard-file-select", {
+        detail: { path: `skills/${skillId}/${filename}` },
+      }));
     } catch (e: any) {
       this.error = e.message;
     }
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    window.dispatchEvent(new CustomEvent("dashboard-file-select", {
+      detail: { path: null },
+    }));
   }
 
   startEdit() {

@@ -241,7 +241,8 @@ export class ChatWidget extends LitElement {
 
   private _onHashChange = () => {
     const hash = location.hash.replace("#", "");
-    if (hash !== "workspace" && hash !== "knowledge") {
+    const noFilePages = ["status", "sessions", "cron", "media", ""];
+    if (noFilePages.includes(hash)) {
       this.contextFile = "";
     }
   };

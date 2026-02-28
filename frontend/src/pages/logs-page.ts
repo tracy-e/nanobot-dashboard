@@ -136,7 +136,17 @@ export class LogsPage extends LitElement {
       // Auto-scroll to bottom
       const el = this.shadowRoot?.querySelector(".log-content");
       if (el) el.scrollTop = el.scrollHeight;
+      window.dispatchEvent(new CustomEvent("dashboard-file-select", {
+        detail: { path: `logs/${name}` },
+      }));
     }
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    window.dispatchEvent(new CustomEvent("dashboard-file-select", {
+      detail: { path: null },
+    }));
   }
 
   private formatSize(bytes: number): string {
