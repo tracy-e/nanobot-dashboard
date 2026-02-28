@@ -10,6 +10,7 @@ import "./pages/knowledge-page.js";
 import "./pages/skills-page.js";
 import "./pages/logs-page.js";
 import "./pages/media-page.js";
+import "./components/chat-widget.js";
 
 @customElement("nano-app")
 export class NanoApp extends LitElement {
@@ -96,6 +97,7 @@ export class NanoApp extends LitElement {
         ${this.page === "media" ? html`<media-page></media-page>` : ""}
         ${this.page === "logs" ? html`<logs-page></logs-page>` : ""}
       </main>
+      <chat-widget></chat-widget>
     `;
   }
 }
