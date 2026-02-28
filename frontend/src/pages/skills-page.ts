@@ -17,6 +17,7 @@ export class SkillsPage extends LitElement {
   @state() private refreshing = false;
   @state() private saving = false;
   @state() private mobileShowDetail = false;
+  @state() private showDeleteConfirm = false;
 
   static styles = css`
     ${unsafeCSS(hljsStyles)}
@@ -162,6 +163,44 @@ export class SkillsPage extends LitElement {
     .empty { color: var(--text-muted); text-align: center; padding: 48px; font-size: 13px; }
     .error { color: var(--red); margin-bottom: 12px; font-size: 13px; }
 
+    /* ---- Delete Confirm Dialog ---- */
+    .dialog-overlay {
+      position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .dialog {
+      background: var(--bg-card); border: 1px solid var(--border-default);
+      border-radius: var(--r-lg); padding: 24px 28px;
+      min-width: 320px; max-width: 400px;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+    }
+    .dialog h3 {
+      margin: 0 0 8px; font-size: 15px; font-weight: 600;
+      color: var(--text-primary);
+    }
+    .dialog p {
+      margin: 0 0 20px; font-size: 13px; color: var(--text-secondary);
+      line-height: 1.5; word-break: break-all;
+    }
+    .dialog-actions {
+      display: flex; justify-content: flex-end; gap: 10px;
+    }
+    .dialog-actions button {
+      padding: 7px 18px; border-radius: var(--r-sm);
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      font-family: var(--font-sans); transition: all 0.15s var(--ease);
+    }
+    .btn-cancel-dialog {
+      background: var(--bg-elevated); color: var(--text-secondary);
+      border: 1px solid var(--border-default);
+    }
+    .btn-cancel-dialog:hover { color: var(--text-primary); background: var(--bg-hover); }
+    .btn-confirm-delete {
+      background: var(--red); color: #fff; border: 1px solid var(--red);
+    }
+    .btn-confirm-delete:hover { opacity: 0.85; }
+
     .back-btn {
       display: none; padding: 6px 14px; background: transparent;
       color: var(--text-secondary); border: 1px solid var(--border-default);
@@ -260,9 +299,18 @@ export class SkillsPage extends LitElement {
     this.saving = false;
   }
 
-  async deleteSkill() {
+  private confirmDeleteSkill() {
     if (!this.selected) return;
-    if (!confirm(`Delete skill "${this.selected.name}"? This removes the entire directory.`)) return;
+    this.showDeleteConfirm = true;
+  }
+
+  private cancelDelete() {
+    this.showDeleteConfirm = false;
+  }
+
+  async doDeleteSkill() {
+    if (!this.selected) return;
+    this.showDeleteConfirm = false;
     try {
       await api.deleteSkill(this.selected.id);
       this.selected = null;
@@ -275,7 +323,7 @@ export class SkillsPage extends LitElement {
   }
 
   private renderFileContent() {
-    if (!this.activeFile) return html`<div class="empty">No file selected</div>`;
+    if (!this.activeFile) return html`<div class="empty">未选择文件</div>`;
     if (this.activeFile.endsWith(".md")) {
       return html`<div class="md-preview">${unsafeHTML(renderMarkdown(this.fileContent))}</div>`;
     }
@@ -285,13 +333,13 @@ export class SkillsPage extends LitElement {
   render() {
     return html`
       <div class="page-header">
-        <h1>Skills</h1>
-        <button class="refresh-btn ${this.refreshing ? "spinning" : ""}" @click=${this.refresh} title="Refresh">&#x21bb;</button>
+        <h1>技能</h1>
+        <button class="refresh-btn ${this.refreshing ? "spinning" : ""}" @click=${this.refresh} title="刷新">&#x21bb;</button>
       </div>
       ${this.error ? html`<div class="error">${this.error}</div>` : ""}
       <div class="layout">
         <div class="list-panel ${this.mobileShowDetail ? "hidden" : ""}">
-          <div class="stat">${this.skills.length} skills</div>
+          <div class="stat">${this.skills.length} 个技能</div>
           ${this.skills.map(
             (s) => html`
               <div
@@ -311,11 +359,11 @@ export class SkillsPage extends LitElement {
         </div>
         <div class="detail-panel ${!this.mobileShowDetail ? "hidden" : ""}">
           ${!this.selected
-            ? html`<div class="empty">Select a skill to view</div>`
+            ? html`<div class="empty">选择技能以查看</div>`
             : html`
                 <div class="detail-header">
                   <div class="detail-header-left">
-                    <button class="back-btn" @click=${this.goBackToList}>← Back</button>
+                    <button class="back-btn" @click=${this.goBackToList}>← 返回</button>
                     <h2>${this.selected.name}</h2>
                     <div class="file-tabs">
                       ${this.selected.files.map(
@@ -331,14 +379,14 @@ export class SkillsPage extends LitElement {
                   <div class="detail-actions">
                     ${this.editing
                       ? html`
-                          <button class="btn btn-cancel" @click=${this.cancelEdit}>Cancel</button>
+                          <button class="btn btn-cancel" @click=${this.cancelEdit}>取消</button>
                           <button class="btn btn-save" @click=${this.saveEdit} ?disabled=${this.saving}>
-                            ${this.saving ? "Saving..." : "Save"}
+                            ${this.saving ? "保存中..." : "保存"}
                           </button>
                         `
                       : html`
-                          <button class="btn btn-edit" @click=${this.startEdit}>Edit</button>
-                          <button class="btn btn-danger" @click=${this.deleteSkill}>Delete</button>
+                          <button class="btn btn-edit" @click=${this.startEdit}>编辑</button>
+                          <button class="btn btn-danger" @click=${this.confirmDeleteSkill}>删除</button>
                         `}
                   </div>
                 </div>
@@ -354,6 +402,18 @@ export class SkillsPage extends LitElement {
               `}
         </div>
       </div>
+      ${this.showDeleteConfirm ? html`
+        <div class="dialog-overlay">
+          <div class="dialog">
+            <h3>删除技能</h3>
+            <p>确定删除技能 "${this.selected?.name}"？将移除整个目录。</p>
+            <div class="dialog-actions">
+              <button class="btn-cancel-dialog" @click=${this.cancelDelete}>取消</button>
+              <button class="btn-confirm-delete" @click=${this.doDeleteSkill}>删除</button>
+            </div>
+          </div>
+        </div>
+      ` : ""}
     `;
   }
 }
