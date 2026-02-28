@@ -4,7 +4,7 @@ import { api } from "../api/client.js";
 
 @customElement("memory-page")
 export class MemoryPage extends FileViewer {
-  readonly pageTitle = "Workspace";
+  readonly pageTitle = "工作区";
   groups: string[] = [];
   groupLabels: Record<string, string> = {};
 

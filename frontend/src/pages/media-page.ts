@@ -124,6 +124,44 @@ export class MediaPage extends LitElement {
     .empty { color: var(--text-muted); text-align: center; padding: 48px; font-size: 13px; }
     .error { color: var(--red); margin-bottom: 12px; font-size: 13px; }
 
+    /* ---- Delete Confirm Dialog ---- */
+    .dialog-overlay {
+      position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .dialog {
+      background: var(--bg-card); border: 1px solid var(--border-default);
+      border-radius: var(--r-lg); padding: 24px 28px;
+      min-width: 320px; max-width: 400px;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+    }
+    .dialog h3 {
+      margin: 0 0 8px; font-size: 15px; font-weight: 600;
+      color: var(--text-primary);
+    }
+    .dialog p {
+      margin: 0 0 20px; font-size: 13px; color: var(--text-secondary);
+      line-height: 1.5; word-break: break-all;
+    }
+    .dialog-actions {
+      display: flex; justify-content: flex-end; gap: 10px;
+    }
+    .dialog-actions button {
+      padding: 7px 18px; border-radius: var(--r-sm);
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      font-family: var(--font-sans); transition: all 0.15s var(--ease);
+    }
+    .btn-cancel {
+      background: var(--bg-elevated); color: var(--text-secondary);
+      border: 1px solid var(--border-default);
+    }
+    .btn-cancel:hover { color: var(--text-primary); background: var(--bg-hover); }
+    .btn-confirm-delete {
+      background: var(--red); color: #fff; border: 1px solid var(--red);
+    }
+    .btn-confirm-delete:hover { opacity: 0.85; }
+
     .back-btn {
       display: none; padding: 6px 14px; background: transparent;
       color: var(--text-secondary); border: 1px solid var(--border-default);
@@ -146,6 +184,7 @@ export class MediaPage extends LitElement {
 
   @state() private mobileShowDetail = false;
   @state() private fileText = "";
+  @state() private showDeleteConfirm = false;
 
   connectedCallback() {
     super.connectedCallback();
@@ -185,9 +224,18 @@ export class MediaPage extends LitElement {
     this.mobileShowDetail = false;
   }
 
-  async deleteFile() {
+  private confirmDelete() {
     if (!this.selected) return;
-    if (!confirm(`Delete "${this.selected.name}"?`)) return;
+    this.showDeleteConfirm = true;
+  }
+
+  private cancelDelete() {
+    this.showDeleteConfirm = false;
+  }
+
+  async doDelete() {
+    if (!this.selected) return;
+    this.showDeleteConfirm = false;
     try {
       await api.deleteMediaFile(this.selected.name);
       this.selected = null;
@@ -216,7 +264,7 @@ export class MediaPage extends LitElement {
   }
 
   private renderPreview() {
-    if (!this.selected) return html`<div class="empty">Select a file to preview</div>`;
+    if (!this.selected) return html`<div class="empty">选择文件以预览</div>`;
     const url = api.mediaUrl(this.selected.name);
     switch (this.selected.type) {
       case "image":
@@ -231,7 +279,7 @@ export class MediaPage extends LitElement {
         return html`<div class="empty">
           <div style="font-size:32px;margin-bottom:12px">📦</div>
           <div>${this.selected.mime}</div>
-          <div style="margin-top:8px"><a href=${url} download style="color:var(--blue)">Download</a></div>
+          <div style="margin-top:8px"><a href=${url} download style="color:var(--blue)">下载</a></div>
         </div>`;
     }
   }
@@ -239,13 +287,13 @@ export class MediaPage extends LitElement {
   render() {
     return html`
       <div class="page-header">
-        <h1>Media</h1>
-        <button class="refresh-btn ${this.refreshing ? "spinning" : ""}" @click=${this.refresh} title="Refresh">&#x21bb;</button>
+        <h1>媒体</h1>
+        <button class="refresh-btn ${this.refreshing ? "spinning" : ""}" @click=${this.refresh} title="刷新">&#x21bb;</button>
       </div>
       ${this.error ? html`<div class="error">${this.error}</div>` : ""}
       <div class="layout">
         <div class="list-panel ${this.mobileShowDetail ? "hidden" : ""}">
-          <div class="stat">${this.files.length} files</div>
+          <div class="stat">${this.files.length} 个文件</div>
           ${this.files.map(
             (f) => html`
               <div
@@ -266,14 +314,14 @@ export class MediaPage extends LitElement {
         </div>
         <div class="preview-panel ${!this.mobileShowDetail ? "hidden" : ""}">
           ${!this.selected
-            ? html`<div class="empty">Select a file to preview</div>`
+            ? html`<div class="empty">选择文件以预览</div>`
             : html`
                 <div class="preview-header">
                   <div style="display:flex;align-items:center;min-width:0">
-                    <button class="back-btn" @click=${this.goBackToList}>← Back</button>
+                    <button class="back-btn" @click=${this.goBackToList}>← 返回</button>
                     <h2>${this.selected.name}</h2>
                   </div>
-                  <button class="delete-btn" @click=${this.deleteFile}>Delete</button>
+                  <button class="delete-btn" @click=${this.confirmDelete}>删除</button>
                 </div>
                 <div class="preview-body">
                   ${this.renderPreview()}
@@ -281,6 +329,18 @@ export class MediaPage extends LitElement {
               `}
         </div>
       </div>
+      ${this.showDeleteConfirm ? html`
+        <div class="dialog-overlay">
+          <div class="dialog">
+            <h3>删除文件</h3>
+            <p>确定删除 "${this.selected?.name}"？此操作不可撤销。</p>
+            <div class="dialog-actions">
+              <button class="btn-cancel" @click=${this.cancelDelete}>取消</button>
+              <button class="btn-confirm-delete" @click=${this.doDelete}>删除</button>
+            </div>
+          </div>
+        </div>
+      ` : ""}
     `;
   }
 }

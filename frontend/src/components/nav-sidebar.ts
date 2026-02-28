@@ -156,14 +156,14 @@ export class NavSidebar extends LitElement {
   };
 
   private items = [
-    { id: "status", label: "Status" },
-    { id: "sessions", label: "Sessions" },
-    { id: "cron", label: "Cron Jobs" },
-    { id: "workspace", label: "Workspace" },
-    { id: "knowledge", label: "Knowledge" },
-    { id: "skills", label: "Skills" },
-    { id: "media", label: "Media" },
-    { id: "logs", label: "Logs" },
+    { id: "status", label: "状态" },
+    { id: "sessions", label: "会话" },
+    { id: "cron", label: "定时任务" },
+    { id: "workspace", label: "工作区" },
+    { id: "knowledge", label: "知识库" },
+    { id: "skills", label: "技能" },
+    { id: "media", label: "媒体" },
+    { id: "logs", label: "日志" },
   ];
 
   private _close() {

@@ -3,9 +3,9 @@ import { FileViewer } from "../components/file-viewer.js";
 
 @customElement("knowledge-page")
 export class KnowledgePage extends FileViewer {
-  readonly pageTitle = "Knowledge Base";
+  readonly pageTitle = "知识库";
   readonly groups = ["knowledge"];
   readonly groupLabels = {
-    knowledge: "Knowledge",
+    knowledge: "知识库",
   };
 }

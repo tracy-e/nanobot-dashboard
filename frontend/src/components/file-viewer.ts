@@ -24,6 +24,7 @@ export abstract class FileViewer extends LitElement {
   @state() protected searchQuery = "";
   @state() protected refreshing = false;
   @state() private collapsedDirs: Set<string> = new Set();
+  @state() private showDeleteConfirm = false;
 
   static styles = css`
     ${unsafeCSS(hljsStyles)}
@@ -214,6 +215,44 @@ export abstract class FileViewer extends LitElement {
     .empty { color: var(--text-muted); text-align: center; padding: 48px; font-size: 13px; }
     .error { color: var(--red); margin-bottom: 12px; font-size: 13px; }
 
+    /* ---- Delete Confirm Dialog ---- */
+    .dialog-overlay {
+      position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .dialog {
+      background: var(--bg-card); border: 1px solid var(--border-default);
+      border-radius: var(--r-lg); padding: 24px 28px;
+      min-width: 320px; max-width: 400px;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+    }
+    .dialog h3 {
+      margin: 0 0 8px; font-size: 15px; font-weight: 600;
+      color: var(--text-primary);
+    }
+    .dialog p {
+      margin: 0 0 20px; font-size: 13px; color: var(--text-secondary);
+      line-height: 1.5; word-break: break-all;
+    }
+    .dialog-actions {
+      display: flex; justify-content: flex-end; gap: 10px;
+    }
+    .dialog-actions button {
+      padding: 7px 18px; border-radius: var(--r-sm);
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      font-family: var(--font-sans); transition: all 0.15s var(--ease);
+    }
+    .btn-cancel {
+      background: var(--bg-elevated); color: var(--text-secondary);
+      border: 1px solid var(--border-default);
+    }
+    .btn-cancel:hover { color: var(--text-primary); background: var(--bg-hover); }
+    .btn-confirm-delete {
+      background: var(--red); color: #fff; border: 1px solid var(--red);
+    }
+    .btn-confirm-delete:hover { opacity: 0.85; }
+
     @media (max-width: 768px) {
       h1 { font-size: 20px; }
       .layout { flex-direction: column; height: auto; min-height: calc(100vh - 110px); }
@@ -269,9 +308,18 @@ export abstract class FileViewer extends LitElement {
 
   cancelEdit() { this.editing = false; }
 
-  async deleteFile() {
-    const name = this.selectedPath.split("/").pop() || this.selectedPath;
-    if (!confirm(`Delete "${name}"?`)) return;
+  private confirmDeleteFile() {
+    if (!this.selectedPath) return;
+    this.showDeleteConfirm = true;
+  }
+
+  private cancelDelete() {
+    this.showDeleteConfirm = false;
+  }
+
+  async doDeleteFile() {
+    if (!this.selectedPath) return;
+    this.showDeleteConfirm = false;
     try {
       await api.deleteMemoryFile(this.selectedPath);
       this.selectedPath = "";
@@ -389,14 +437,14 @@ export abstract class FileViewer extends LitElement {
     return html`
       <div class="page-header">
         <h1>${this.pageTitle}</h1>
-        <button class="refresh-btn ${this.refreshing ? "spinning" : ""}" @click=${this.refresh} title="Refresh">&#x21bb;</button>
+        <button class="refresh-btn ${this.refreshing ? "spinning" : ""}" @click=${this.refresh} title="刷新">&#x21bb;</button>
       </div>
       ${this.error ? html`<div class="error">${this.error}</div>` : ""}
       <div class="layout">
         <div class="tree-panel">
           <div class="search-box">
             <input
-              placeholder="Search files..."
+              placeholder="搜索文件..."
               .value=${this.searchQuery}
               @input=${(e: any) => (this.searchQuery = e.target.value)}
             />
@@ -443,21 +491,21 @@ export abstract class FileViewer extends LitElement {
         </div>
         <div class="content-panel">
           ${!this.selectedPath
-            ? html`<div class="empty">Select a file to view</div>`
+            ? html`<div class="empty">选择文件以查看</div>`
             : html`
                 <div class="content-header">
                   <h2>${this.selectedPath}</h2>
                   <div class="actions">
                     ${this.editing
                       ? html`
-                          <button class="btn btn-cancel" @click=${this.cancelEdit}>Cancel</button>
+                          <button class="btn btn-cancel" @click=${this.cancelEdit}>取消</button>
                           <button class="btn btn-save" @click=${this.saveEdit} ?disabled=${this.saving}>
-                            ${this.saving ? "Saving..." : "Save"}
+                            ${this.saving ? "保存中..." : "保存"}
                           </button>
                         `
                       : html`
-                          <button class="btn btn-delete" @click=${this.deleteFile}>Delete</button>
-                          <button class="btn btn-edit" @click=${this.startEdit}>Edit</button>
+                          <button class="btn btn-delete" @click=${this.confirmDeleteFile}>删除</button>
+                          <button class="btn btn-edit" @click=${this.startEdit}>编辑</button>
                         `}
                   </div>
                 </div>
@@ -474,6 +522,18 @@ export abstract class FileViewer extends LitElement {
               `}
         </div>
       </div>
+      ${this.showDeleteConfirm ? html`
+        <div class="dialog-overlay">
+          <div class="dialog">
+            <h3>删除文件</h3>
+            <p>确定删除 "${this.selectedPath.split("/").pop() || this.selectedPath}"？</p>
+            <div class="dialog-actions">
+              <button class="btn-cancel" @click=${this.cancelDelete}>取消</button>
+              <button class="btn-confirm-delete" @click=${this.doDeleteFile}>删除</button>
+            </div>
+          </div>
+        </div>
+      ` : ""}
     `;
   }
 }

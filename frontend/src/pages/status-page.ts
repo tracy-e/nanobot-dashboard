@@ -310,23 +310,23 @@ export class StatusPage extends LitElement {
 
   render() {
     if (this.error) return html`<div class="error">${this.error}</div>`;
-    if (!this.data) return html`<div style="color:var(--text-muted)">Loading...</div>`;
+    if (!this.data) return html`<div style="color:var(--text-muted)">加载中...</div>`;
 
     const d = this.data;
     const running = d.gateway?.running;
 
     return html`
       <div class="page-header">
-        <h1>System Status</h1>
-        <button class="refresh-btn ${this.refreshing ? "spinning" : ""}" @click=${this.refresh} title="Refresh">&#x21bb;</button>
+        <h1>系统状态</h1>
+        <button class="refresh-btn ${this.refreshing ? "spinning" : ""}" @click=${this.refresh} title="刷新">&#x21bb;</button>
       </div>
 
       <div class="grid">
         <div class="card">
-          <h3>Gateway</h3>
+          <h3>网关</h3>
           <span class="status-badge ${running ? "running" : "stopped"}">
             <span class="pulse-dot ${running ? "on" : "off"}"></span>
-            ${running ? "Running" : "Stopped"}
+            ${running ? "运行中" : "已停止"}
           </span>
           ${running && d.gateway.pids?.length
             ? html`<div class="pid-text">PID ${d.gateway.pids.join(", ")}</div>`
@@ -334,13 +334,13 @@ export class StatusPage extends LitElement {
         </div>
 
         <div class="card">
-          <h3>Model</h3>
+          <h3>模型</h3>
           <div class="model-value">${d.model}</div>
-          ${d.compactModel ? html`<div class="compact-model">Compact: <span>${d.compactModel}</span></div>` : ""}
+          ${d.compactModel ? html`<div class="compact-model">紧凑模式：<span>${d.compactModel}</span></div>` : ""}
         </div>
 
         <div class="card clickable" @click=${() => this._navigate("sessions")}>
-          <h3>Channels</h3>
+          <h3>频道</h3>
           <div class="channel-list">
             ${Object.entries(d.channels || {}).map(
               ([name, ch]: [string, any]) => html`
@@ -353,24 +353,24 @@ export class StatusPage extends LitElement {
         </div>
 
         <div class="card clickable" @click=${() => this._navigate("cron")}>
-          <h3>Cron Jobs</h3>
+          <h3>定时任务</h3>
           <div class="cron-value">
-            ${d.cron?.enabled}<span> / ${d.cron?.total} active</span>
+            ${d.cron?.enabled}<span> / ${d.cron?.total} 个活跃</span>
           </div>
         </div>
 
         <div class="card clickable" @click=${() => this._navigate("skills")}>
-          <h3>Skills</h3>
+          <h3>技能</h3>
           <div class="cron-value">
-            ${d.skillsCount}<span> installed</span>
+            ${d.skillsCount}<span> 个已安装</span>
           </div>
         </div>
 
         ${d.knowledgeCount ? html`
           <div class="card clickable" @click=${() => this._navigate("knowledge")}>
-            <h3>Knowledge</h3>
+            <h3>知识库</h3>
             <div class="cron-value">
-              ${d.knowledgeCount}<span> articles</span>
+              ${d.knowledgeCount}<span> 篇文章</span>
             </div>
           </div>
         ` : ""}
@@ -379,8 +379,8 @@ export class StatusPage extends LitElement {
       ${this.config
         ? html`
             <div class="config-header">
-              <div class="section-title">Configuration (sanitized)</div>
-              <button class="edit-btn" @click=${this.openConfigEditor}>Edit</button>
+              <div class="section-title">配置（已脱敏）</div>
+              <button class="edit-btn" @click=${this.openConfigEditor}>编辑</button>
             </div>
             <div class="config-json">${unsafeHTML(highlightFile(JSON.stringify(this.config, null, 2), "json"))}</div>
           `
@@ -390,7 +390,7 @@ export class StatusPage extends LitElement {
         <div class="modal-overlay" @click=${(e: Event) => { if (e.target === e.currentTarget) this.showConfigModal = false; }}>
           <div class="modal">
             <div class="modal-header">
-              <h2>Edit config.json</h2>
+              <h2>编辑 config.json</h2>
               <button class="modal-close" @click=${() => this.showConfigModal = false}>&times;</button>
             </div>
             <div class="modal-body">
@@ -402,9 +402,9 @@ export class StatusPage extends LitElement {
             </div>
             <div class="modal-footer">
               ${this.configError ? html`<div class="config-err">${this.configError}</div>` : ""}
-              <button class="modal-btn cancel" @click=${() => this.showConfigModal = false}>Cancel</button>
+              <button class="modal-btn cancel" @click=${() => this.showConfigModal = false}>取消</button>
               <button class="modal-btn save" ?disabled=${this.configSaving} @click=${this.saveConfig}>
-                ${this.configSaving ? "Saving..." : "Save"}
+                ${this.configSaving ? "保存中..." : "保存"}
               </button>
             </div>
           </div>
