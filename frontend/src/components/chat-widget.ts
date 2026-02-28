@@ -283,8 +283,8 @@ export class ChatWidget extends LitElement {
     this.open = !this.open;
     if (this.open) {
       this.loadHistory();
-      // Focus input after opening
       this.updateComplete.then(() => {
+        this.scrollToBottom();
         this.shadowRoot?.querySelector<HTMLInputElement>(".chat-input")?.focus();
       });
     }
