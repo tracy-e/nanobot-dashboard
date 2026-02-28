@@ -19,6 +19,7 @@ export class ChatWidget extends LitElement {
   @state() private sessionId = "";
   @state() private progressText = "";
   @state() private historyLoaded = false;
+  @state() private contextFile = "";
 
   static styles = css`
     ${unsafeCSS(hljsStyles)}
@@ -35,6 +36,7 @@ export class ChatWidget extends LitElement {
     }
     .fab:hover { transform: scale(1.08); box-shadow: 0 6px 24px rgba(74, 222, 128, 0.45); }
     .fab svg { width: 24px; height: 24px; }
+    .fab-emoji { font-size: 26px; line-height: 1; }
 
     /* ---- Chat window ---- */
     .chat-window {
@@ -164,6 +166,29 @@ export class ChatWidget extends LitElement {
       font-style: italic; font-family: var(--font-sans);
     }
 
+    /* ---- Context bar ---- */
+    .context-bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 16px; flex-shrink: 0;
+      background: rgba(74, 222, 128, 0.06);
+      border-top: 1px solid rgba(74, 222, 128, 0.15);
+      font-size: 12px; color: var(--green, #4ADE80);
+      font-family: var(--font-mono);
+    }
+    .context-bar .ctx-icon { flex-shrink: 0; }
+    .context-bar .ctx-path {
+      flex: 1; overflow: hidden; text-overflow: ellipsis;
+      white-space: nowrap; direction: rtl; text-align: left;
+    }
+    .context-bar .ctx-clear {
+      flex-shrink: 0; width: 20px; height: 20px;
+      border-radius: 4px; border: none; cursor: pointer;
+      background: transparent; color: var(--text-muted, #7d8590);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; transition: color 0.15s ease;
+    }
+    .context-bar .ctx-clear:hover { color: var(--text-primary, #e6edf3); }
+
     /* ---- Input area ---- */
     .chat-input-area {
       display: flex; gap: 8px; padding: 12px 16px;
@@ -209,9 +234,29 @@ export class ChatWidget extends LitElement {
     }
   `;
 
+  private _onFileSelect = (e: Event) => {
+    const path = (e as CustomEvent).detail?.path;
+    this.contextFile = path || "";
+  };
+
+  private _onHashChange = () => {
+    const hash = location.hash.replace("#", "");
+    if (hash !== "workspace" && hash !== "knowledge") {
+      this.contextFile = "";
+    }
+  };
+
   connectedCallback() {
     super.connectedCallback();
     this.sessionId = localStorage.getItem("chat_session_id") || "";
+    window.addEventListener("dashboard-file-select", this._onFileSelect);
+    window.addEventListener("hashchange", this._onHashChange);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    window.removeEventListener("dashboard-file-select", this._onFileSelect);
+    window.removeEventListener("hashchange", this._onHashChange);
   }
 
   private async loadHistory() {
@@ -285,6 +330,12 @@ export class ChatWidget extends LitElement {
         body: JSON.stringify({
           message: msg,
           session_id: this.sessionId || undefined,
+          ...(this.contextFile ? {
+            context: {
+              page: location.hash.replace("#", "") || "status",
+              file: this.contextFile,
+            },
+          } : {}),
         }),
       });
 
@@ -395,7 +446,7 @@ export class ChatWidget extends LitElement {
           <div class="chat-messages">
             ${this.messages.length === 0 && !this.sending ? html`
               <div class="empty-state">
-                <div class="icon">💬</div>
+                <div class="icon">🤖</div>
                 <div>向 nanobot 发送消息</div>
               </div>
             ` : ""}
@@ -415,6 +466,13 @@ export class ChatWidget extends LitElement {
               </div>
             ` : ""}
           </div>
+          ${this.contextFile ? html`
+            <div class="context-bar">
+              <span class="ctx-icon">📄</span>
+              <span class="ctx-path">${this.contextFile}</span>
+              <button class="ctx-clear" @click=${() => this.contextFile = ""} title="清除上下文">✕</button>
+            </div>
+          ` : ""}
           <div class="chat-input-area">
             <input
               class="chat-input"
@@ -437,12 +495,7 @@ export class ChatWidget extends LitElement {
           <svg viewBox="0 0 24 24" fill="currentColor">
             <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" fill="none"/>
           </svg>
-        ` : html`
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/>
-            <path d="M7 9h10v2H7zm0-3h10v2H7z"/>
-          </svg>
-        `}
+        ` : html`<span class="fab-emoji">🤖</span>`}
       </button>
     `;
   }

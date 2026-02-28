@@ -268,6 +268,11 @@ export abstract class FileViewer extends LitElement {
     this.load();
   }
 
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    window.dispatchEvent(new CustomEvent("dashboard-file-select", { detail: { path: null } }));
+  }
+
   async refresh() {
     this.refreshing = true;
     await this.load();
@@ -299,6 +304,7 @@ export abstract class FileViewer extends LitElement {
     } catch (e: any) {
       this.error = e.message;
     }
+    window.dispatchEvent(new CustomEvent("dashboard-file-select", { detail: { path } }));
   }
 
   startEdit() {
@@ -326,6 +332,7 @@ export abstract class FileViewer extends LitElement {
       this.content = "";
       this.editing = false;
       await this.load();
+      window.dispatchEvent(new CustomEvent("dashboard-file-select", { detail: { path: null } }));
     } catch (e: any) {
       this.error = e.message;
     }

@@ -8,7 +8,7 @@ import secrets
 
 from aiohttp import web
 
-from dashboard.config import SESSIONS_DIR
+from dashboard.config import SESSIONS_DIR, WORKSPACE_DIR
 
 
 async def chat_send(request: web.Request) -> web.StreamResponse:
@@ -19,6 +19,20 @@ async def chat_send(request: web.Request) -> web.StreamResponse:
         raise web.HTTPBadRequest(text="message is required")
 
     session_id = body.get("session_id") or f"dashboard_chat_{secrets.token_hex(4)}"
+
+    # Inject dashboard context if provided
+    context = body.get("context")
+    if context and isinstance(context, dict):
+        page = context.get("page", "")
+        file_path = context.get("file", "")
+        if file_path:
+            abs_path = WORKSPACE_DIR / file_path
+            message = (
+                f"[Dashboard Context]\n"
+                f"当前页面: {page}\n"
+                f"当前文件: {abs_path}\n\n"
+                f"{message}"
+            )
 
     resp = web.StreamResponse(
         status=200,
@@ -123,6 +137,7 @@ async def chat_history(request: web.Request) -> web.Response:
             if role == "user" and isinstance(content, str):
                 content = re.sub(r"\[Current Time:[^\]]*\]\n?", "", content)
                 content = re.sub(r"\[Runtime Context\]\n(?:[^\n]*\n?)*", "", content)
+                content = re.sub(r"\[Dashboard Context\]\n(?:[^\n]*\n)*\n?", "", content)
                 content = content.strip()
             messages.append({
                 "role": role,
