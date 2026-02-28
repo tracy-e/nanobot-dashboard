@@ -49,6 +49,29 @@ export class NavSidebar extends LitElement {
       letter-spacing: 0;
     }
 
+    /* ---- Search Trigger ---- */
+    .search-trigger {
+      margin: 0 14px 8px; padding: 9px 14px;
+      display: flex; align-items: center; gap: 10px;
+      background: var(--bg-input); border: 1px solid var(--border-default);
+      border-radius: var(--r-sm); cursor: pointer;
+      transition: all 0.18s var(--ease);
+    }
+    .search-trigger:hover {
+      border-color: var(--green); background: var(--green-glow);
+    }
+    .search-icon-nav { font-size: 13px; opacity: 0.6; }
+    .search-text {
+      flex: 1; font-size: 13px; color: var(--text-muted);
+      font-family: var(--font-sans);
+    }
+    .search-kbd {
+      font-size: 10px; color: var(--text-muted);
+      background: var(--bg-elevated); border: 1px solid var(--border-default);
+      border-radius: 3px; padding: 1px 5px;
+      font-family: var(--font-mono);
+    }
+
     /* ---- Nav ---- */
     nav {
       padding: 0 14px;
@@ -170,11 +193,20 @@ export class NavSidebar extends LitElement {
     this.dispatchEvent(new CustomEvent("close"));
   }
 
+  private _openSearch() {
+    window.dispatchEvent(new CustomEvent("open-search"));
+  }
+
   render() {
     return html`
       <div class="brand">
         <div class="brand-mark">N</div>
         <div class="brand-name">nanobot<span>dash</span></div>
+      </div>
+      <div class="search-trigger" @click=${this._openSearch}>
+        <span class="search-icon-nav">🔍</span>
+        <span class="search-text">搜索</span>
+        <span class="search-kbd">⌘K</span>
       </div>
       <nav>
         ${this.items.filter((item) => !this.hiddenItems.includes(item.id)).map(

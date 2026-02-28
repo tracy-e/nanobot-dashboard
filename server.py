@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from dashboard.config import HOST, PORT
 from dashboard.utils.auth import auth_middleware
-from dashboard.routes import status, sessions, cron, memory, config_view, skills, logs, media, chat
+from dashboard.routes import status, sessions, cron, memory, config_view, skills, logs, media, chat, search
 
 
 def create_app() -> web.Application:
@@ -26,6 +26,7 @@ def create_app() -> web.Application:
     logs.setup(app)
     media.setup(app)
     chat.setup(app)
+    search.setup(app)
 
     # Serve frontend static files
     static_dir = Path(__file__).parent / "static"
