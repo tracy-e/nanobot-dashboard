@@ -86,6 +86,9 @@ export const api = {
   getLogFile: (name: string, lines = 500) =>
     request(`/api/logs/${encodeURIComponent(name)}?lines=${lines}`),
 
+  // Search
+  search: (q: string) => request(`/api/search?q=${encodeURIComponent(q)}`),
+
   // Media
   getMediaFiles: () => request("/api/media"),
   mediaUrl: (name: string) => `/api/media/${encodeURIComponent(name)}`,

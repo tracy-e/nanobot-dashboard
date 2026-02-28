@@ -21,7 +21,6 @@ export abstract class FileViewer extends LitElement {
   @state() protected editContent = "";
   @state() protected error = "";
   @state() protected saving = false;
-  @state() protected searchQuery = "";
   @state() protected refreshing = false;
   @state() private collapsedDirs: Set<string> = new Set();
   @state() private showDeleteConfirm = false;
@@ -59,18 +58,6 @@ export abstract class FileViewer extends LitElement {
       border-radius: var(--r-lg); box-shadow: var(--shadow-card);
       display: flex; flex-direction: column;
     }
-    .search-box {
-      padding: 12px 14px; border-bottom: 1px solid var(--border-subtle); flex-shrink: 0;
-    }
-    .search-box input {
-      width: 100%; background: var(--bg-input); border: 1px solid var(--border-default);
-      border-radius: var(--r-sm); padding: 8px 12px; color: var(--text-primary);
-      font-size: 12px; font-family: var(--font-sans);
-      transition: border-color 0.15s var(--ease);
-    }
-    .search-box input::placeholder { color: var(--text-muted); }
-    .search-box input:focus { outline: none; border-color: var(--green); }
-
     .tree-list { flex: 1; overflow-y: auto; }
 
     .tree-group {
@@ -266,12 +253,29 @@ export abstract class FileViewer extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.load();
+    window.addEventListener("dashboard-file-navigate", this._onFileNavigate as EventListener);
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
+    window.removeEventListener("dashboard-file-navigate", this._onFileNavigate as EventListener);
     window.dispatchEvent(new CustomEvent("dashboard-file-select", { detail: { path: null } }));
   }
+
+  private _onFileNavigate = (e: CustomEvent<{ path: string }>) => {
+    const path = e.detail.path;
+    // Only handle if this viewer owns the file's group
+    const file = this.files.find((f: any) => f.path === path);
+    if (file) {
+      this.selectFile(path);
+    } else {
+      // File may not be loaded yet — reload and try again
+      this.load().then(() => {
+        const found = this.files.find((f: any) => f.path === path);
+        if (found) this.selectFile(path);
+      });
+    }
+  };
 
   async refresh() {
     this.refreshing = true;
@@ -374,15 +378,9 @@ export abstract class FileViewer extends LitElement {
     this.collapsedDirs = next;
   }
 
-  get filteredFiles() {
-    if (!this.searchQuery) return this.files;
-    const q = this.searchQuery.toLowerCase();
-    return this.files.filter((f: any) => f.path.toLowerCase().includes(q));
-  }
-
   private groupBySection() {
     const sections: Record<string, any[]> = {};
-    for (const f of this.filteredFiles) {
+    for (const f of this.files) {
       const g = f.group || "other";
       if (!sections[g]) sections[g] = [];
       sections[g].push(f);
@@ -449,13 +447,6 @@ export abstract class FileViewer extends LitElement {
       ${this.error ? html`<div class="error">${this.error}</div>` : ""}
       <div class="layout">
         <div class="tree-panel">
-          <div class="search-box">
-            <input
-              placeholder="搜索文件..."
-              .value=${this.searchQuery}
-              @input=${(e: any) => (this.searchQuery = e.target.value)}
-            />
-          </div>
           <div class="tree-list">
             ${this.groups.map((g) => {
               const items = sections[g];
