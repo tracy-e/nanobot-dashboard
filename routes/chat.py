@@ -8,7 +8,7 @@ import secrets
 
 from aiohttp import web
 
-from dashboard.config import SESSIONS_DIR, WORKSPACE_DIR
+from dashboard.config import NANOBOT_ROOT, SESSIONS_DIR, WORKSPACE_DIR
 
 
 async def chat_send(request: web.Request) -> web.StreamResponse:
@@ -26,7 +26,10 @@ async def chat_send(request: web.Request) -> web.StreamResponse:
         page = context.get("page", "")
         file_path = context.get("file", "")
         if file_path:
-            abs_path = WORKSPACE_DIR / file_path
+            if file_path.startswith("logs/"):
+                abs_path = NANOBOT_ROOT / file_path
+            else:
+                abs_path = WORKSPACE_DIR / file_path
             message = (
                 f"[Dashboard Context]\n"
                 f"当前页面: {page}\n"
