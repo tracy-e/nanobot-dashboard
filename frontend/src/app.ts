@@ -23,14 +23,15 @@ export class NanoApp extends LitElement {
   static styles = css`
     :host {
       display: flex;
-      min-height: 100vh;
+      height: 100vh;
+      overflow: hidden;
       background: var(--bg-root);
     }
     main {
       flex: 1;
       padding: 32px 40px;
       overflow-y: auto;
-      max-height: 100vh;
+      min-height: 0;
       background:
         radial-gradient(ellipse at 70% 0%, rgba(74, 222, 128, 0.025) 0%, transparent 55%),
         radial-gradient(ellipse at 30% 100%, rgba(245, 158, 11, 0.015) 0%, transparent 55%),
