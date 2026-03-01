@@ -31,37 +31,43 @@ def _classify(mime: str) -> str:
 
 
 async def list_media(request: web.Request) -> web.Response:
-    """List all files in the media directory."""
+    """List all files in the media directory (recursive)."""
     if not MEDIA_DIR.exists():
         return web.json_response({"exists": False, "files": []})
 
     files = []
-    for entry in sorted(MEDIA_DIR.iterdir()):
-        if not entry.is_file() or entry.name.startswith("."):
-            continue
-        mime, _ = mimetypes.guess_type(entry.name)
-        mime = mime or "application/octet-stream"
-        try:
-            stat = entry.stat()
-            files.append({
-                "name": entry.name,
-                "size": stat.st_size,
-                "modified": stat.st_mtime,
-                "mime": mime,
-                "type": _classify(mime),
-            })
-        except OSError:
-            continue
+    media_root = str(MEDIA_DIR)
+    for dirpath, _dirnames, filenames in os.walk(MEDIA_DIR, followlinks=True):
+        for fname in sorted(filenames):
+            if fname.startswith("."):
+                continue
+            fullpath = os.path.join(dirpath, fname)
+            rel = os.path.relpath(fullpath, media_root)
+            mime, _ = mimetypes.guess_type(fname)
+            mime = mime or "application/octet-stream"
+            try:
+                stat = os.stat(fullpath)
+                files.append({
+                    "name": fname,
+                    "path": rel,
+                    "size": stat.st_size,
+                    "modified": stat.st_mtime,
+                    "mime": mime,
+                    "type": _classify(mime),
+                })
+            except OSError:
+                continue
 
+    files.sort(key=lambda f: f["path"])
     return web.json_response({"exists": True, "files": files})
 
 
 async def get_media_file(request: web.Request) -> web.Response:
     """Serve a media file with correct content-type."""
-    name = request.match_info["name"]
+    path = request.match_info["path"]
 
     try:
-        filepath = safe_resolve(MEDIA_DIR, name)
+        filepath = safe_resolve(MEDIA_DIR, path)
     except ValueError:
         raise web.HTTPForbidden(text="Path traversal detected")
 
@@ -73,10 +79,10 @@ async def get_media_file(request: web.Request) -> web.Response:
 
 async def delete_media_file(request: web.Request) -> web.Response:
     """Delete a media file."""
-    name = request.match_info["name"]
+    path = request.match_info["path"]
 
     try:
-        filepath = safe_resolve(MEDIA_DIR, name)
+        filepath = safe_resolve(MEDIA_DIR, path)
     except ValueError:
         raise web.HTTPForbidden(text="Path traversal detected")
 
@@ -84,10 +90,10 @@ async def delete_media_file(request: web.Request) -> web.Response:
         raise web.HTTPNotFound(text="File not found")
 
     filepath.unlink()
-    return web.json_response({"deleted": name})
+    return web.json_response({"deleted": path})
 
 
 def setup(app: web.Application):
     app.router.add_get("/api/media", list_media)
-    app.router.add_get("/api/media/{name}", get_media_file)
-    app.router.add_delete("/api/media/{name}", delete_media_file)
+    app.router.add_get("/api/media/{path:.+}", get_media_file)
+    app.router.add_delete("/api/media/{path:.+}", delete_media_file)
