@@ -65,6 +65,16 @@ export class MediaPage extends LitElement {
     .file-icon.video { background: var(--orange-soft); color: var(--orange); }
     .file-icon.text { background: var(--green-soft); color: var(--green); }
     .file-icon.other { background: var(--bg-elevated); color: var(--text-muted); }
+    .dir-header {
+      padding: 8px 16px; cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12px; font-weight: 600; color: var(--text-secondary);
+      background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle);
+      user-select: none; transition: background 0.12s var(--ease);
+    }
+    .dir-header:hover { background: var(--bg-elevated); }
+    .dir-arrow { font-size: 10px; transition: transform 0.15s var(--ease); }
+    .dir-arrow.collapsed { transform: rotate(-90deg); }
     .file-info { min-width: 0; flex: 1; }
     .file-name {
       font-size: 13px; color: var(--text-primary); font-weight: 500;
@@ -185,6 +195,7 @@ export class MediaPage extends LitElement {
   @state() private mobileShowDetail = false;
   @state() private fileText = "";
   @state() private showDeleteConfirm = false;
+  @state() private collapsedDirs = new Set<string>();
 
   connectedCallback() {
     super.connectedCallback();
@@ -212,12 +223,19 @@ export class MediaPage extends LitElement {
     this.fileText = "";
     if (f.type === "text") {
       try {
-        const res = await fetch(api.mediaUrl(f.name));
+        const res = await fetch(api.mediaUrl(f.path));
         this.fileText = await res.text();
       } catch (e: any) {
         this.error = e.message;
       }
     }
+  }
+
+  private toggleDir(dir: string) {
+    const next = new Set(this.collapsedDirs);
+    if (next.has(dir)) next.delete(dir);
+    else next.add(dir);
+    this.collapsedDirs = next;
   }
 
   private goBackToList() {
@@ -237,7 +255,7 @@ export class MediaPage extends LitElement {
     if (!this.selected) return;
     this.showDeleteConfirm = false;
     try {
-      await api.deleteMediaFile(this.selected.name);
+      await api.deleteMediaFile(this.selected.path);
       this.selected = null;
       this.mobileShowDetail = false;
       await this.load();
@@ -265,7 +283,7 @@ export class MediaPage extends LitElement {
 
   private renderPreview() {
     if (!this.selected) return html`<div class="empty">选择文件以预览</div>`;
-    const url = api.mediaUrl(this.selected.name);
+    const url = api.mediaUrl(this.selected.path);
     switch (this.selected.type) {
       case "image":
         return html`<img src=${url} alt=${this.selected.name} />`;
@@ -284,6 +302,59 @@ export class MediaPage extends LitElement {
     }
   }
 
+  private renderFileItem(f: any) {
+    return html`
+      <div
+        class="file-item ${this.selected?.path === f.path ? "active" : ""}"
+        @click=${() => this.selectFile(f)}
+      >
+        <div class="file-icon ${f.type}">${this.typeIcon(f.type)}</div>
+        <div class="file-info">
+          <div class="file-name">${f.name}</div>
+          <div class="file-meta">
+            <span>${this.formatSize(f.size)}</span>
+            <span>${f.mime}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderFileList() {
+    // Group files by directory
+    const groups = new Map<string, any[]>();
+    for (const f of this.files) {
+      const idx = f.path.lastIndexOf("/");
+      const dir = idx === -1 ? "" : f.path.substring(0, idx);
+      if (!groups.has(dir)) groups.set(dir, []);
+      groups.get(dir)!.push(f);
+    }
+
+    const result: any[] = [];
+
+    // Root files first (no directory)
+    const rootFiles = groups.get("") || [];
+    for (const f of rootFiles) result.push(this.renderFileItem(f));
+
+    // Then subdirectories
+    for (const [dir, files] of groups) {
+      if (dir === "") continue;
+      const collapsed = this.collapsedDirs.has(dir);
+      result.push(html`
+        <div class="dir-header" @click=${() => this.toggleDir(dir)}>
+          <span class="dir-arrow ${collapsed ? "collapsed" : ""}">▼</span>
+          <span>📁 ${dir}/</span>
+          <span style="color:var(--text-muted);font-weight:400">${files.length}</span>
+        </div>
+      `);
+      if (!collapsed) {
+        for (const f of files) result.push(this.renderFileItem(f));
+      }
+    }
+
+    return result;
+  }
+
   render() {
     return html`
       <div class="page-header">
@@ -294,23 +365,7 @@ export class MediaPage extends LitElement {
       <div class="layout">
         <div class="list-panel ${this.mobileShowDetail ? "hidden" : ""}">
           <div class="stat">${this.files.length} 个文件</div>
-          ${this.files.map(
-            (f) => html`
-              <div
-                class="file-item ${this.selected?.name === f.name ? "active" : ""}"
-                @click=${() => this.selectFile(f)}
-              >
-                <div class="file-icon ${f.type}">${this.typeIcon(f.type)}</div>
-                <div class="file-info">
-                  <div class="file-name">${f.name}</div>
-                  <div class="file-meta">
-                    <span>${this.formatSize(f.size)}</span>
-                    <span>${f.mime}</span>
-                  </div>
-                </div>
-              </div>
-            `
-          )}
+          ${this.renderFileList()}
         </div>
         <div class="preview-panel ${!this.mobileShowDetail ? "hidden" : ""}">
           ${!this.selected
@@ -319,7 +374,7 @@ export class MediaPage extends LitElement {
                 <div class="preview-header">
                   <div style="display:flex;align-items:center;min-width:0">
                     <button class="back-btn" @click=${this.goBackToList}>← 返回</button>
-                    <h2>${this.selected.name}</h2>
+                    <h2>${this.selected.path}</h2>
                   </div>
                   <button class="delete-btn" @click=${this.confirmDelete}>删除</button>
                 </div>
@@ -333,7 +388,7 @@ export class MediaPage extends LitElement {
         <div class="dialog-overlay">
           <div class="dialog">
             <h3>删除文件</h3>
-            <p>确定删除 "${this.selected?.name}"？此操作不可撤销。</p>
+            <p>确定删除 "${this.selected?.path}"？此操作不可撤销。</p>
             <div class="dialog-actions">
               <button class="btn-cancel" @click=${this.cancelDelete}>取消</button>
               <button class="btn-confirm-delete" @click=${this.doDelete}>删除</button>

@@ -91,7 +91,11 @@ export const api = {
 
   // Media
   getMediaFiles: () => request("/api/media"),
-  mediaUrl: (name: string) => `/api/media/${encodeURIComponent(name)}`,
-  deleteMediaFile: (name: string) =>
-    request(`/api/media/${encodeURIComponent(name)}`, { method: "DELETE" }),
+  mediaUrl: (path: string) =>
+    `/api/media/${path.split("/").map(encodeURIComponent).join("/")}`,
+  deleteMediaFile: (path: string) =>
+    request(
+      `/api/media/${path.split("/").map(encodeURIComponent).join("/")}`,
+      { method: "DELETE" },
+    ),
 };
