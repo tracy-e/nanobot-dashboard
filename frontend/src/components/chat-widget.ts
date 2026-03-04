@@ -41,7 +41,7 @@ export class ChatWidget extends LitElement {
     /* ---- Chat window ---- */
     .chat-window {
       position: fixed; bottom: 88px; right: 24px; z-index: 901;
-      width: 400px; height: 560px;
+      width: 480px; height: 640px;
       background: var(--bg-card, #161b22); border: 1px solid var(--border-default, #30363d);
       border-radius: 16px; display: flex; flex-direction: column;
       box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
@@ -191,7 +191,7 @@ export class ChatWidget extends LitElement {
 
     /* ---- Input area ---- */
     .chat-input-area {
-      display: flex; gap: 8px; padding: 12px 16px;
+      display: flex; align-items: center; gap: 8px; padding: 12px 16px;
       border-top: 1px solid var(--border-subtle, #21262d);
       background: var(--bg-surface, #0d1117); flex-shrink: 0;
     }
@@ -202,6 +202,9 @@ export class ChatWidget extends LitElement {
       color: var(--text-primary, #e6edf3); font-size: 13px;
       font-family: var(--font-sans); outline: none;
       transition: border-color 0.15s ease;
+      resize: none; max-height: 120px;
+      line-height: 1.5; height: 36px; box-sizing: border-box;
+      overflow-y: hidden;
     }
     .chat-input:focus { border-color: var(--green, #4ADE80); }
     .chat-input:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -285,7 +288,7 @@ export class ChatWidget extends LitElement {
       this.loadHistory();
       this.updateComplete.then(() => {
         this.scrollToBottom();
-        this.shadowRoot?.querySelector<HTMLInputElement>(".chat-input")?.focus();
+        this.shadowRoot?.querySelector<HTMLTextAreaElement>(".chat-input")?.focus();
       });
     }
   }
@@ -316,6 +319,8 @@ export class ChatWidget extends LitElement {
     this.input = "";
     this.sending = true;
     this.progressText = "";
+    const textarea = this.shadowRoot?.querySelector<HTMLTextAreaElement>(".chat-input");
+    if (textarea) { textarea.style.height = '36px'; textarea.style.overflowY = 'hidden'; }
     this.messages = [...this.messages, { role: "user", content: msg }];
     await this.updateComplete;
     this.scrollToBottom();
@@ -475,14 +480,15 @@ export class ChatWidget extends LitElement {
             </div>
           ` : ""}
           <div class="chat-input-area">
-            <input
+            <textarea
               class="chat-input"
               placeholder="输入消息..."
               .value=${this.input}
-              @input=${(e: any) => this.input = e.target.value}
+              @input=${(e: any) => { this.input = e.target.value; const el = e.target; el.style.height = '36px'; const h = Math.min(el.scrollHeight, 120); el.style.height = h + 'px'; el.style.overflowY = h >= 120 ? 'auto' : 'hidden'; }}
               @keydown=${this.handleKeyDown}
               ?disabled=${this.sending}
-            />
+              rows="1"
+            ></textarea>
             <button class="send-btn" @click=${this.sendMessage} ?disabled=${this.sending || !this.input.trim()} title="发送">
               <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
