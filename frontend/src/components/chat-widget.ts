@@ -2,7 +2,8 @@ import { LitElement, html, css, unsafeCSS } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { renderMarkdown } from "../utils/markdown.js";
-import hljsStyles from "highlight.js/styles/github-dark.css?inline";
+import { hljsThemeCSS as hljsStyles } from "../utils/hljs-theme.js";
+import { t } from "../i18n.js";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -32,7 +33,7 @@ export class ChatWidget extends LitElement {
       display: flex; align-items: center; justify-content: center;
       box-shadow: 0 4px 16px rgba(74, 222, 128, 0.35);
       transition: transform 0.2s ease, box-shadow 0.2s ease;
-      color: #0a0f0d;
+      color: var(--accent-on-green);
     }
     .fab:hover { transform: scale(1.08); box-shadow: 0 6px 24px rgba(74, 222, 128, 0.45); }
     .fab svg { width: 24px; height: 24px; }
@@ -97,9 +98,9 @@ export class ChatWidget extends LitElement {
       font-family: var(--font-sans);
     }
     .msg-row.user .msg-bubble {
-      background: linear-gradient(135deg, #1A365D, #1E3A5F);
-      color: #DBEAFE; border-bottom-right-radius: 4px;
-      border: 1px solid rgba(96, 165, 250, 0.12);
+      background: var(--msg-user-bg);
+      color: var(--msg-user-text); border-bottom-right-radius: 4px;
+      border: 1px solid var(--msg-user-border);
     }
     .msg-row.assistant .msg-bubble {
       background: var(--bg-elevated, #1c2128); color: var(--text-secondary, #b1bac4);
@@ -129,14 +130,14 @@ export class ChatWidget extends LitElement {
       border-radius: 4px; font-size: 11px; color: var(--text-primary);
     }
     .msg-row.user .md-content :not(pre) > code {
-      background: rgba(255,255,255,0.12); color: #DBEAFE;
+      background: var(--msg-user-code-bg); color: var(--msg-user-text);
     }
     .msg-row.user .md-content pre {
-      background: rgba(0,0,0,0.25); border-color: rgba(255,255,255,0.08);
+      background: var(--msg-user-pre-bg); border-color: var(--msg-user-pre-border);
     }
-    .msg-row.user .md-content a { color: #93C5FD; }
+    .msg-row.user .md-content a { color: var(--msg-user-link); }
     .md-content strong { color: var(--text-primary); }
-    .msg-row.user .md-content strong { color: #DBEAFE; }
+    .msg-row.user .md-content strong { color: var(--msg-user-text); }
     .md-content blockquote { border-left: 3px solid var(--blue, #58a6ff); padding: 2px 10px; margin: 3px 0; color: var(--text-muted); }
     .md-content table { border-collapse: collapse; margin: 4px 0; width: 100%; }
     .md-content th, .md-content td { border: 1px solid var(--border-default); padding: 4px 8px; font-size: 11px; }
@@ -170,8 +171,8 @@ export class ChatWidget extends LitElement {
     .context-bar {
       display: flex; align-items: center; gap: 8px;
       padding: 6px 16px; flex-shrink: 0;
-      background: rgba(74, 222, 128, 0.06);
-      border-top: 1px solid rgba(74, 222, 128, 0.15);
+      background: var(--green-glow);
+      border-top: 1px solid var(--green-soft);
       font-size: 12px; color: var(--green, #4ADE80);
       font-family: var(--font-mono);
     }
@@ -213,7 +214,7 @@ export class ChatWidget extends LitElement {
       width: 36px; height: 36px; border-radius: 8px;
       background: var(--green, #4ADE80); border: none;
       cursor: pointer; display: flex; align-items: center; justify-content: center;
-      color: #0a0f0d; transition: opacity 0.15s ease;
+      color: var(--accent-on-green); transition: opacity 0.15s ease;
       flex-shrink: 0;
     }
     .send-btn:hover { opacity: 0.85; }
@@ -348,7 +349,7 @@ export class ChatWidget extends LitElement {
       if (!res.ok || !res.body) {
         this.messages = [...this.messages, {
           role: "assistant",
-          content: `错误: ${res.status} ${res.statusText}`,
+          content: `${t("chat.error")}${res.status} ${res.statusText}`,
         }];
         this.sending = false;
         return;
@@ -393,7 +394,7 @@ export class ChatWidget extends LitElement {
               } else if (eventType === "error") {
                 this.messages = [...this.messages, {
                   role: "assistant",
-                  content: `错误: ${data.message}`,
+                  content: `${t("chat.error")}${data.message}`,
                 }];
                 this.progressText = "";
               }
@@ -407,7 +408,7 @@ export class ChatWidget extends LitElement {
     } catch (e: any) {
       this.messages = [...this.messages, {
         role: "assistant",
-        content: `网络错误: ${e.message}`,
+        content: `${t("chat.networkError")}${e.message}`,
       }];
     }
 
@@ -438,12 +439,12 @@ export class ChatWidget extends LitElement {
           <div class="chat-header">
             <div class="status-dot"></div>
             <span class="chat-title">nanobot</span>
-            <button class="header-btn" @click=${this.newChat} title="新对话">
+            <button class="header-btn" @click=${this.newChat} title="${t("chat.newChat")}">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                 <path d="M12 5v14M5 12h14"/>
               </svg>
             </button>
-            <button class="header-btn" @click=${this.toggleOpen} title="关闭">
+            <button class="header-btn" @click=${this.toggleOpen} title="${t("chat.close")}">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                 <path d="M18 6L6 18M6 6l12 12"/>
               </svg>
@@ -453,7 +454,7 @@ export class ChatWidget extends LitElement {
             ${this.messages.length === 0 && !this.sending ? html`
               <div class="empty-state">
                 <div class="icon">🤖</div>
-                <div>向 nanobot 发送消息</div>
+                <div>${t("chat.emptyState")}</div>
               </div>
             ` : ""}
             ${this.messages.map(m => html`
@@ -476,20 +477,20 @@ export class ChatWidget extends LitElement {
             <div class="context-bar">
               <span class="ctx-icon">📄</span>
               <span class="ctx-path">${this.contextFile}</span>
-              <button class="ctx-clear" @click=${() => this.contextFile = ""} title="清除上下文">✕</button>
+              <button class="ctx-clear" @click=${() => this.contextFile = ""} title="${t("chat.clearContext")}">✕</button>
             </div>
           ` : ""}
           <div class="chat-input-area">
             <textarea
               class="chat-input"
-              placeholder="输入消息..."
+              placeholder="${t("chat.inputPlaceholder")}"
               .value=${this.input}
               @input=${(e: any) => { this.input = e.target.value; const el = e.target; el.style.height = '36px'; const h = Math.min(el.scrollHeight, 120); el.style.height = h + 'px'; el.style.overflowY = h >= 120 ? 'auto' : 'hidden'; }}
               @keydown=${this.handleKeyDown}
               ?disabled=${this.sending}
               rows="1"
             ></textarea>
-            <button class="send-btn" @click=${this.sendMessage} ?disabled=${this.sending || !this.input.trim()} title="发送">
+            <button class="send-btn" @click=${this.sendMessage} ?disabled=${this.sending || !this.input.trim()} title="${t("chat.send")}">
               <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
               </svg>
@@ -497,7 +498,7 @@ export class ChatWidget extends LitElement {
           </div>
         </div>
       ` : ""}
-      <button class="fab" @click=${this.toggleOpen} title="聊天">
+      <button class="fab" @click=${this.toggleOpen} title="${t("chat.chat")}">
         ${this.open ? html`
           <svg viewBox="0 0 24 24" fill="currentColor">
             <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" fill="none"/>

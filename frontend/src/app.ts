@@ -33,8 +33,8 @@ export class NanoApp extends LitElement {
       overflow-y: auto;
       min-height: 0;
       background:
-        radial-gradient(ellipse at 70% 0%, rgba(74, 222, 128, 0.025) 0%, transparent 55%),
-        radial-gradient(ellipse at 30% 100%, rgba(245, 158, 11, 0.015) 0%, transparent 55%),
+        radial-gradient(ellipse at 70% 0%, var(--green-glow) 0%, transparent 55%),
+        radial-gradient(ellipse at 30% 100%, var(--orange-soft) 0%, transparent 55%),
         var(--bg-root);
     }
     .hamburger {
@@ -48,7 +48,7 @@ export class NanoApp extends LitElement {
     }
     .sidebar-overlay {
       display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,0.5); z-index: 99;
+      background: var(--overlay-bg); z-index: 99;
     }
     .sidebar-overlay.open { display: block; }
     @media (max-width: 768px) {

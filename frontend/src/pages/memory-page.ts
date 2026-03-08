@@ -1,10 +1,11 @@
 import { customElement } from "lit/decorators.js";
 import { FileViewer } from "../components/file-viewer.js";
 import { api } from "../api/client.js";
+import { t } from "../i18n.js";
 
 @customElement("memory-page")
 export class MemoryPage extends FileViewer {
-  readonly pageTitle = "工作区";
+  get pageTitle() { return t("memory.title"); }
   groups: string[] = [];
   groupLabels: Record<string, string> = {};
 

@@ -7,7 +7,8 @@ import { state } from "lit/decorators.js";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { api } from "../api/client.js";
 import { renderMarkdown, highlightFile } from "../utils/markdown.js";
-import hljsStyles from "highlight.js/styles/github-dark.css?inline";
+import { hljsThemeCSS as hljsStyles } from "../utils/hljs-theme.js";
+import { t } from "../i18n.js";
 
 export abstract class FileViewer extends LitElement {
   abstract readonly pageTitle: string;
@@ -205,7 +206,7 @@ export abstract class FileViewer extends LitElement {
     /* ---- Delete Confirm Dialog ---- */
     .dialog-overlay {
       position: fixed; inset: 0; z-index: 1000;
-      background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+      background: var(--overlay-bg); backdrop-filter: blur(4px);
       display: flex; align-items: center; justify-content: center;
     }
     .dialog {
@@ -442,7 +443,7 @@ export abstract class FileViewer extends LitElement {
     return html`
       <div class="page-header">
         <h1>${this.pageTitle}</h1>
-        <button class="refresh-btn ${this.refreshing ? "spinning" : ""}" @click=${this.refresh} title="刷新">&#x21bb;</button>
+        <button class="refresh-btn ${this.refreshing ? "spinning" : ""}" @click=${this.refresh} title="${t("common.refresh")}">&#x21bb;</button>
       </div>
       ${this.error ? html`<div class="error">${this.error}</div>` : ""}
       <div class="layout">
@@ -489,21 +490,21 @@ export abstract class FileViewer extends LitElement {
         </div>
         <div class="content-panel">
           ${!this.selectedPath
-            ? html`<div class="empty">选择文件以查看</div>`
+            ? html`<div class="empty">${t("fileViewer.selectFile")}</div>`
             : html`
                 <div class="content-header">
                   <h2>${this.selectedPath}</h2>
                   <div class="actions">
                     ${this.editing
                       ? html`
-                          <button class="btn btn-cancel" @click=${this.cancelEdit}>取消</button>
+                          <button class="btn btn-cancel" @click=${this.cancelEdit}>${t("common.cancel")}</button>
                           <button class="btn btn-save" @click=${this.saveEdit} ?disabled=${this.saving}>
-                            ${this.saving ? "保存中..." : "保存"}
+                            ${this.saving ? t("common.saving") : t("common.save")}
                           </button>
                         `
                       : html`
-                          <button class="btn btn-delete" @click=${this.confirmDeleteFile}>删除</button>
-                          <button class="btn btn-edit" @click=${this.startEdit}>编辑</button>
+                          <button class="btn btn-delete" @click=${this.confirmDeleteFile}>${t("common.delete")}</button>
+                          <button class="btn btn-edit" @click=${this.startEdit}>${t("common.edit")}</button>
                         `}
                   </div>
                 </div>
@@ -523,11 +524,11 @@ export abstract class FileViewer extends LitElement {
       ${this.showDeleteConfirm ? html`
         <div class="dialog-overlay">
           <div class="dialog">
-            <h3>删除文件</h3>
-            <p>确定删除 "${this.selectedPath.split("/").pop() || this.selectedPath}"？</p>
+            <h3>${t("fileViewer.deleteTitle")}</h3>
+            <p>${t("fileViewer.deleteConfirm")} "${this.selectedPath.split("/").pop() || this.selectedPath}"？</p>
             <div class="dialog-actions">
-              <button class="btn-cancel" @click=${this.cancelDelete}>取消</button>
-              <button class="btn-confirm-delete" @click=${this.doDeleteFile}>删除</button>
+              <button class="btn-cancel" @click=${this.cancelDelete}>${t("common.cancel")}</button>
+              <button class="btn-confirm-delete" @click=${this.doDeleteFile}>${t("common.delete")}</button>
             </div>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { LitElement, html, css } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { api } from "../api/client.js";
+import { t } from "../i18n.js";
 
 @customElement("logs-page")
 export class LogsPage extends LitElement {
@@ -160,12 +161,12 @@ export class LogsPage extends LitElement {
 
     return html`
       <div class="page-header">
-        <h1>Logs</h1>
-        <button class="refresh-btn ${this.refreshing ? "spinning" : ""}" @click=${this.refresh} title="Refresh">&#x21bb;</button>
+        <h1>${t("logs.title")}</h1>
+        <button class="refresh-btn ${this.refreshing ? "spinning" : ""}" @click=${this.refresh} title="${t("common.refresh")}">&#x21bb;</button>
       </div>
 
       ${this.files.length === 0
-        ? html`<div class="empty">No .log files found</div>`
+        ? html`<div class="empty">${t("logs.noFiles")}</div>`
         : html`
           <div class="tabs">
             ${this.files.map(f => html`
@@ -183,16 +184,16 @@ export class LogsPage extends LitElement {
             <div class="log-toolbar">
               <span class="log-filename">${this.active}</span>
               <div class="log-meta">
-                <span>${this.lines.length} lines</span>
+                <span>${this.lines.length}${t("logs.lines")}</span>
                 <span>${this.formatSize(this.totalSize)}</span>
               </div>
             </div>
             <div class="log-content">${
               this.loading
-                ? "Loading..."
+                ? t("logs.loading")
                 : this.lines.length
                   ? this.lines.join("\n")
-                  : "Empty log file"
+                  : t("logs.emptyLog")
             }</div>
           </div>
         `}

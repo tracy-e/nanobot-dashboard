@@ -1,6 +1,7 @@
 import { LitElement, html, css } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { api } from "../api/client.js";
+import { t } from "../i18n.js";
 
 interface FormData {
   name: string;
@@ -15,25 +16,29 @@ const emptyForm = (): FormData => ({
   name: "", schedule: "", message: "", deliver: false, channel: "", to: "",
 });
 
-// Cron frequency presets
-const CRON_PRESETS = [
-  { label: "每分钟", value: "minutely" },
-  { label: "每小时", value: "hourly" },
-  { label: "每天", value: "daily" },
-  { label: "每周", value: "weekly" },
-  { label: "每月", value: "monthly" },
-  { label: "自定义", value: "custom" },
-];
+// Cron frequency presets — use getter for i18n
+function getCronPresets() {
+  return [
+    { label: t("cron.minutely"), value: "minutely" },
+    { label: t("cron.hourly"), value: "hourly" },
+    { label: t("cron.daily"), value: "daily" },
+    { label: t("cron.weekly"), value: "weekly" },
+    { label: t("cron.monthly"), value: "monthly" },
+    { label: t("cron.custom"), value: "custom" },
+  ];
+}
 
-const WEEKDAYS = [
-  { label: "Mon", value: 1 },
-  { label: "Tue", value: 2 },
-  { label: "Wed", value: 3 },
-  { label: "Thu", value: 4 },
-  { label: "Fri", value: 5 },
-  { label: "Sat", value: 6 },
-  { label: "Sun", value: 0 },
-];
+function getWeekdays() {
+  return [
+    { label: t("cron.weekMon"), value: 1 },
+    { label: t("cron.weekTue"), value: 2 },
+    { label: t("cron.weekWed"), value: 3 },
+    { label: t("cron.weekThu"), value: 4 },
+    { label: t("cron.weekFri"), value: 5 },
+    { label: t("cron.weekSat"), value: 6 },
+    { label: t("cron.weekSun"), value: 0 },
+  ];
+}
 
 @customElement("cron-page")
 export class CronPage extends LitElement {
@@ -140,7 +145,7 @@ export class CronPage extends LitElement {
 
     /* Modal */
     .modal-backdrop {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      position: fixed; inset: 0; background: var(--overlay-bg);
       z-index: 200; display: flex; align-items: center; justify-content: center;
     }
     .modal {
@@ -177,7 +182,7 @@ export class CronPage extends LitElement {
     /* ---- Delete Confirm Dialog ---- */
     .dialog-overlay {
       position: fixed; inset: 0; z-index: 1000;
-      background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+      background: var(--overlay-bg); backdrop-filter: blur(4px);
       display: flex; align-items: center; justify-content: center;
     }
     .dialog {
@@ -271,7 +276,7 @@ export class CronPage extends LitElement {
   async runJob(job: any) {
     try {
       const res = await api.runCronJob(job.id);
-      alert(res.note || "任务已触发");
+      alert(res.note || t("cron.triggered"));
       await this.load();
     } catch (e: any) { this.error = e.message; }
   }
@@ -375,22 +380,22 @@ export class CronPage extends LitElement {
     if (parts.length < 5) return expr;
     const [m, h, dom, , dow] = parts;
 
-    if (expr.trim() === "* * * * *") return "每分钟";
+    if (expr.trim() === "* * * * *") return t("cron.everyMinute");
     if (h === "*" && dom === "*" && dow === "*") {
-      return m === "0" ? "每小时" : `每小时 :${m.padStart(2, "0")}`;
+      return m === "0" ? t("cron.everyHour") : `${t("cron.everyHour")} :${m.padStart(2, "0")}`;
     }
 
     const time = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 
-    if (dom === "*" && dow === "*") return `每天 ${time}`;
+    if (dom === "*" && dow === "*") return `${t("cron.everyDay")} ${time}`;
     if (dom === "*" && dow !== "*") {
-      const dayNames = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
-      const days = dow.split(",").map(d => dayNames[parseInt(d)] || d).join(", ");
+      const dayKeys = [t("cron.sun"), t("cron.mon"), t("cron.tue"), t("cron.wed"), t("cron.thu"), t("cron.fri"), t("cron.sat")];
+      const days = dow.split(",").map(d => dayKeys[parseInt(d)] || d).join(", ");
       return `${days} ${time}`;
     }
     if (dom !== "*" && dow === "*") {
       const n = parseInt(dom);
-      return `每月 ${n} 日 ${time}`;
+      return t("cron.monthDayTime").replace("{day}", String(n)).replace("{time}", time);
     }
     return expr;
   }
@@ -404,7 +409,7 @@ export class CronPage extends LitElement {
     const d = this.formData;
     const schedule = this.buildSchedule();
     if (!d.name || !schedule || !d.message) {
-      this.error = "名称、调度和消息为必填项";
+      this.error = t("cron.required");
       return;
     }
     try {
@@ -438,21 +443,21 @@ export class CronPage extends LitElement {
     return html`
       <div class="modal-backdrop" @click=${this.closeForm}>
         <div class="modal" @click=${(e: Event) => e.stopPropagation()}>
-          <div class="modal-title">${isNew ? "新建任务" : "编辑任务"}</div>
+          <div class="modal-title">${isNew ? t("cron.newJobTitle") : t("cron.editJobTitle")}</div>
           <div class="form-row">
             <div class="form-group">
-              <label>名称</label>
+              <label>${t("cron.name")}</label>
               <input .value=${this.formData.name}
                 @input=${(e: any) => this.updateField("name", e.target.value)}
-                placeholder="任务名称" />
+                placeholder="${t("cron.namePlaceholder")}" />
             </div>
           </div>
 
           <!-- Schedule -->
           <div class="form-group" style="margin-bottom:14px">
-            <label>频率</label>
+            <label>${t("cron.frequency")}</label>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-              ${CRON_PRESETS.map(
+              ${getCronPresets().map(
                 p => html`
                   <button
                     class="btn btn-sm ${this.selectedPreset === p.value ? "btn-primary" : "btn-ghost"}"
@@ -463,9 +468,9 @@ export class CronPage extends LitElement {
             </div>
             ${this.selectedPreset === "weekly" ? html`
               <div style="margin-bottom:10px">
-                <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600">重复日</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600">${t("cron.repeatDays")}</div>
                 <div style="display:flex;gap:6px;flex-wrap:wrap">
-                  ${WEEKDAYS.map(d => html`
+                  ${getWeekdays().map(d => html`
                     <button
                       class="btn btn-sm ${this.selectedWeekdays.includes(d.value) ? "btn-primary" : "btn-ghost"}"
                       style="min-width:44px"
@@ -477,7 +482,7 @@ export class CronPage extends LitElement {
             ` : ""}
             ${this.selectedPreset === "monthly" ? html`
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-                <span style="font-size:13px;color:var(--text-secondary)">每月第</span>
+                <span style="font-size:13px;color:var(--text-secondary)">${t("cron.monthDay")}</span>
                 <select
                   style="width:70px;background:var(--bg-input);border:1px solid var(--border-default);border-radius:var(--r-sm);padding:8px;color:var(--text-primary);font-size:13px"
                   @change=${(e: any) => { this.selectedMonthDay = e.target.value; }}
@@ -488,7 +493,7 @@ export class CronPage extends LitElement {
             ` : ""}
             ${["daily", "weekly", "monthly"].includes(this.selectedPreset) ? html`
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-                <span style="font-size:13px;color:var(--text-secondary)">时间</span>
+                <span style="font-size:13px;color:var(--text-secondary)">${t("cron.time")}</span>
                 <select
                   style="width:70px;background:var(--bg-input);border:1px solid var(--border-default);border-radius:var(--r-sm);padding:8px;color:var(--text-primary);font-size:13px"
                   @change=${(e: any) => { this.customHour = e.target.value; }}
@@ -515,34 +520,34 @@ export class CronPage extends LitElement {
               </div>
             ` : ""}
             <div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono)">
-              表达式：${this.buildSchedule()}
+              ${t("cron.expression")}${this.buildSchedule()}
             </div>
           </div>
 
           <div class="form-group" style="margin-bottom:14px">
-            <label>消息</label>
+            <label>${t("cron.message")}</label>
             <textarea .value=${this.formData.message}
               @input=${(e: any) => this.updateField("message", e.target.value)}
-              placeholder="任务消息..."></textarea>
+              placeholder="${t("cron.messagePlaceholder")}"></textarea>
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label>频道</label>
+              <label>${t("cron.channel")}</label>
               <input .value=${this.formData.channel}
                 @input=${(e: any) => this.updateField("channel", e.target.value)}
-                placeholder="频道名" />
+                placeholder="${t("cron.channelPlaceholder")}" />
             </div>
             <div class="form-group">
-              <label>接收者</label>
+              <label>${t("cron.recipient")}</label>
               <input .value=${this.formData.to}
                 @input=${(e: any) => this.updateField("to", e.target.value)}
-                placeholder="频道 ID" />
+                placeholder="${t("cron.recipientPlaceholder")}" />
             </div>
           </div>
           <div class="form-actions">
-            <button class="btn btn-ghost btn-sm" @click=${this.closeForm}>取消</button>
+            <button class="btn btn-ghost btn-sm" @click=${this.closeForm}>${t("common.cancel")}</button>
             <button class="btn btn-primary btn-sm" @click=${this.submitForm}>
-              ${isNew ? "创建" : "保存"}
+              ${isNew ? t("cron.create") : t("common.save")}
             </button>
           </div>
         </div>
@@ -553,15 +558,15 @@ export class CronPage extends LitElement {
   render() {
     return html`
       <div class="page-header">
-        <h1>定时任务</h1>
-        <button class="refresh-btn ${this.refreshing ? "spinning" : ""}" @click=${this.refresh} title="刷新">&#x21bb;</button>
+        <h1>${t("cron.title")}</h1>
+        <button class="refresh-btn ${this.refreshing ? "spinning" : ""}" @click=${this.refresh} title="${t("common.refresh")}">&#x21bb;</button>
       </div>
       ${this.error ? html`<div class="error">${this.error}</div>` : ""}
 
       <div class="toolbar">
-        <span class="toolbar-count">${this.jobs.length} 个任务</span>
+        <span class="toolbar-count">${this.jobs.length}${t("cron.jobCount")}</span>
         ${this.formMode === null
-          ? html`<button class="btn btn-primary" @click=${this.openNew}>+ 新建任务</button>`
+          ? html`<button class="btn btn-primary" @click=${this.openNew}>${t("cron.newJob")}</button>`
           : ""}
       </div>
 
@@ -571,12 +576,12 @@ export class CronPage extends LitElement {
         <table>
           <thead>
             <tr>
-              <th>名称</th>
-              <th>调度</th>
-              <th>状态</th>
-              <th>上次运行</th>
-              <th class="col-next">下次运行</th>
-              <th>操作</th>
+              <th>${t("cron.name")}</th>
+              <th>${t("cron.schedule")}</th>
+              <th>${t("cron.status")}</th>
+              <th>${t("cron.lastRun")}</th>
+              <th class="col-next">${t("cron.nextRun")}</th>
+              <th>${t("cron.actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -597,7 +602,7 @@ export class CronPage extends LitElement {
                   </td>
                   <td>
                     <span class="enabled-badge ${j.enabled ? "on" : "off"}">
-                      ${j.enabled ? "已启用" : "已禁用"}
+                      ${j.enabled ? t("cron.enabled") : t("cron.disabled")}
                     </span>
                     ${j.state?.lastStatus ? html`<div class="status-text">${j.state.lastStatus}</div>` : ""}
                   </td>
@@ -605,12 +610,12 @@ export class CronPage extends LitElement {
                   <td class="time-info col-next">${this.fmtTime(j.state?.nextRunAtMs)}</td>
                   <td>
                     <div class="actions">
-                      <button class="btn btn-sm btn-ghost" @click=${() => this.openEdit(j)}>编辑</button>
+                      <button class="btn btn-sm btn-ghost" @click=${() => this.openEdit(j)}>${t("common.edit")}</button>
                       <button class="btn btn-sm btn-ghost" @click=${() => this.toggleJob(j)}>
-                        ${j.enabled ? "禁用" : "启用"}
+                        ${j.enabled ? t("cron.disable") : t("cron.enable")}
                       </button>
-                      <button class="btn btn-sm btn-ghost" @click=${() => this.runJob(j)}>运行</button>
-                      <button class="btn btn-sm btn-danger" @click=${() => this.confirmDeleteJob(j)}>删除</button>
+                      <button class="btn btn-sm btn-ghost" @click=${() => this.runJob(j)}>${t("cron.run")}</button>
+                      <button class="btn btn-sm btn-danger" @click=${() => this.confirmDeleteJob(j)}>${t("common.delete")}</button>
                     </div>
                   </td>
                 </tr>
@@ -622,11 +627,11 @@ export class CronPage extends LitElement {
       ${this.showDeleteConfirm ? html`
         <div class="dialog-overlay">
           <div class="dialog">
-            <h3>删除任务</h3>
-            <p>确定删除任务 "${this.deleteTarget?.name}"？</p>
+            <h3>${t("cron.deleteTitle")}</h3>
+            <p>${t("cron.deleteConfirm")} "${this.deleteTarget?.name}"？</p>
             <div class="dialog-actions">
-              <button class="btn-cancel" @click=${this.cancelDelete}>取消</button>
-              <button class="btn-confirm-delete" @click=${this.doDeleteJob}>删除</button>
+              <button class="btn-cancel" @click=${this.cancelDelete}>${t("common.cancel")}</button>
+              <button class="btn-confirm-delete" @click=${this.doDeleteJob}>${t("common.delete")}</button>
             </div>
           </div>
         </div>

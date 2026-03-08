@@ -1,5 +1,6 @@
 import { LitElement, html, css, svg } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import { t } from "../i18n.js";
 
 @customElement("nav-sidebar")
 export class NavSidebar extends LitElement {
@@ -30,7 +31,7 @@ export class NavSidebar extends LitElement {
       width: 36px; height: 36px; border-radius: var(--r-md);
       background: linear-gradient(135deg, var(--green) 0%, var(--green-dim) 100%);
       display: flex; align-items: center; justify-content: center;
-      font-size: 17px; color: #fff; font-weight: 800;
+      font-size: 17px; color: var(--accent-on-green); font-weight: 800;
       font-family: var(--font-sans);
       box-shadow: 0 2px 12px rgba(74, 222, 128, 0.25);
       flex-shrink: 0;
@@ -178,16 +179,18 @@ export class NavSidebar extends LitElement {
               <path d="M5 6h8M5 9h6M5 12h4"/>`,
   };
 
-  private items = [
-    { id: "status", label: "状态" },
-    { id: "sessions", label: "会话" },
-    { id: "cron", label: "定时任务" },
-    { id: "workspace", label: "工作区" },
-    { id: "knowledge", label: "知识库" },
-    { id: "skills", label: "技能" },
-    { id: "media", label: "媒体" },
-    { id: "logs", label: "日志" },
-  ];
+  private get items() {
+    return [
+      { id: "status", label: t("nav.status") },
+      { id: "sessions", label: t("nav.sessions") },
+      { id: "cron", label: t("nav.cron") },
+      { id: "workspace", label: t("nav.workspace") },
+      { id: "knowledge", label: t("nav.knowledge") },
+      { id: "skills", label: t("nav.skills") },
+      { id: "media", label: t("nav.media") },
+      { id: "logs", label: t("nav.logs") },
+    ];
+  }
 
   private _close() {
     this.dispatchEvent(new CustomEvent("close"));
@@ -205,7 +208,7 @@ export class NavSidebar extends LitElement {
       </div>
       <div class="search-trigger" @click=${this._openSearch}>
         <span class="search-icon-nav">🔍</span>
-        <span class="search-text">搜索</span>
+        <span class="search-text">${t("nav.search")}</span>
         <span class="search-kbd">⌘K</span>
       </div>
       <nav>

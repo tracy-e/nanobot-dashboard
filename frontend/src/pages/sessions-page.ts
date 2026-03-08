@@ -3,7 +3,8 @@ import { customElement, state } from "lit/decorators.js";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { api } from "../api/client.js";
 import { renderMarkdown } from "../utils/markdown.js";
-import hljsStyles from "highlight.js/styles/github-dark.css?inline";
+import { hljsThemeCSS as hljsStyles } from "../utils/hljs-theme.js";
+import { t } from "../i18n.js";
 
 @customElement("sessions-page")
 export class SessionsPage extends LitElement {
@@ -179,9 +180,9 @@ export class SessionsPage extends LitElement {
       font-size: 13px; line-height: 1.65; max-width: 75%; word-break: break-word;
     }
     .msg-row.user .msg-bubble {
-      background: linear-gradient(135deg, #1A365D, #1E3A5F);
-      color: #DBEAFE; border-bottom-right-radius: 4px;
-      border: 1px solid rgba(96, 165, 250, 0.12);
+      background: var(--msg-user-bg);
+      color: var(--msg-user-text); border-bottom-right-radius: 4px;
+      border: 1px solid var(--msg-user-border);
     }
     .msg-row.assistant .msg-bubble {
       background: var(--bg-elevated); color: var(--text-secondary);
@@ -215,17 +216,17 @@ export class SessionsPage extends LitElement {
       font-size: 11px; color: var(--text-primary);
     }
     .msg-row.user .md-content :not(pre) > code {
-      background: rgba(255,255,255,0.12); color: #DBEAFE;
+      background: var(--msg-user-code-bg); color: var(--msg-user-text);
     }
     .msg-row.user .md-content pre {
-      background: rgba(0,0,0,0.25); border-color: rgba(255,255,255,0.08);
+      background: var(--msg-user-pre-bg); border-color: var(--msg-user-pre-border);
     }
-    .msg-row.user .md-content a { color: #93C5FD; }
+    .msg-row.user .md-content a { color: var(--msg-user-link); }
     .md-content table { border-collapse: collapse; margin: 6px 0; width: 100%; }
     .md-content th, .md-content td { border: 1px solid var(--border-default); padding: 6px 10px; font-size: 12px; }
     .md-content th { background: var(--bg-input); color: var(--text-primary); font-weight: 600; }
     .md-content strong { color: var(--text-primary); }
-    .msg-row.user .md-content strong { color: #DBEAFE; }
+    .msg-row.user .md-content strong { color: var(--msg-user-text); }
     .md-content blockquote { border-left: 3px solid var(--blue); padding: 2px 12px; margin: 4px 0; color: var(--text-muted); }
     .md-content img { max-width: 100%; border-radius: var(--r-sm); }
     .md-content hr { border: none; border-top: 1px solid var(--border-default); margin: 8px 0; }
@@ -252,7 +253,7 @@ export class SessionsPage extends LitElement {
     /* ---- Delete Confirm Dialog ---- */
     .dialog-overlay {
       position: fixed; inset: 0; z-index: 1000;
-      background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+      background: var(--overlay-bg); backdrop-filter: blur(4px);
       display: flex; align-items: center; justify-content: center;
     }
     .dialog {
@@ -467,7 +468,7 @@ export class SessionsPage extends LitElement {
     if (content) {
       const hidden = content.style.display === "none" || !content.style.display;
       content.style.display = hidden ? "block" : "none";
-      btn.textContent = hidden ? "▾ 收起结果" : "▸ 查看结果";
+      btn.textContent = hidden ? t("sessions.collapseResult") : t("sessions.viewResult");
     }
   }
 
@@ -524,7 +525,7 @@ export class SessionsPage extends LitElement {
       return html`
         <div class="msg-row assistant">
           <div class="msg-bubble tool-msg">
-            <button class="tool-result-toggle" @click=${this.toggleToolResult}>▸ 查看结果</button>
+            <button class="tool-result-toggle" @click=${this.toggleToolResult}>${t("sessions.viewResult")}</button>
             <div class="tool-result-content" style="display:none">${text}</div>
           </div>
         </div>
@@ -559,8 +560,8 @@ export class SessionsPage extends LitElement {
   render() {
     return html`
       <div class="page-header">
-        <h1>会话</h1>
-        <button class="refresh-btn ${this.refreshing ? "spinning" : ""}" @click=${this.refresh} title="刷新">&#x21bb;</button>
+        <h1>${t("sessions.title")}</h1>
+        <button class="refresh-btn ${this.refreshing ? "spinning" : ""}" @click=${this.refresh} title="${t("common.refresh")}">&#x21bb;</button>
       </div>
       ${this.error ? html`<div class="error">${this.error}</div>` : ""}
       <div class="layout">
@@ -571,7 +572,7 @@ export class SessionsPage extends LitElement {
                 <button
                   class="filter-btn ${ch === this.filter ? "active" : ""}"
                   @click=${() => (this.filter = ch)}
-                >${ch || "全部"}</button>
+                >${ch || t("sessions.all")}</button>
               `
             )}
           </div>
@@ -587,19 +588,19 @@ export class SessionsPage extends LitElement {
         </div>
         <div class="detail-panel ${!this.mobileShowDetail ? "hidden" : ""}">
           ${!this.selected
-            ? html`<div class="empty">选择会话以查看</div>`
+            ? html`<div class="empty">${t("sessions.selectToView")}</div>`
             : this.loading
-            ? html`<div class="empty">加载中...</div>`
+            ? html`<div class="empty">${t("common.loading")}</div>`
             : html`
                 <div class="detail-header">
                   <div style="display:flex;align-items:center;min-width:0">
-                    <button class="back-btn" @click=${this.goBackToList}>← 返回</button>
+                    <button class="back-btn" @click=${this.goBackToList}>${t("common.back")}</button>
                     <h2 style="margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${this.selected.metadataKey || this.selected.key}</h2>
                   </div>
-                  <button class="delete-btn" @click=${this.confirmDeleteSession}>删除</button>
+                  <button class="delete-btn" @click=${this.confirmDeleteSession}>${t("common.delete")}</button>
                 </div>
                 <div class="note-bar">
-                  <span class="note-label">备注</span>
+                  <span class="note-label">${t("sessions.note")}</span>
                   ${this.editingNote
                     ? html`
                         <input class="note-input"
@@ -609,15 +610,15 @@ export class SessionsPage extends LitElement {
                             if (e.key === "Enter") this.saveNote();
                             if (e.key === "Escape") this.cancelEditNote();
                           }}
-                          placeholder="添加备注..." />
-                        <button class="note-btn note-btn-save" @click=${this.saveNote}>保存</button>
-                        <button class="note-btn" @click=${this.cancelEditNote}>取消</button>
+                          placeholder="${t("sessions.addNotePlaceholder")}" />
+                        <button class="note-btn note-btn-save" @click=${this.saveNote}>${t("common.save")}</button>
+                        <button class="note-btn" @click=${this.cancelEditNote}>${t("common.cancel")}</button>
                       `
                     : html`
                         <span class="note-text ${this.note ? "" : "note-placeholder"}" @click=${this.startEditNote}>
-                          ${this.note || "点击添加备注..."}
+                          ${this.note || t("sessions.addNote")}
                         </span>
-                        <button class="note-btn" @click=${this.startEditNote}>${this.note ? "编辑" : "添加"}</button>
+                        <button class="note-btn" @click=${this.startEditNote}>${this.note ? t("common.edit") : t("common.add")}</button>
                       `}
                 </div>
                 <div class="messages-container">
@@ -629,11 +630,11 @@ export class SessionsPage extends LitElement {
       ${this.showDeleteConfirm ? html`
         <div class="dialog-overlay">
           <div class="dialog">
-            <h3>删除会话</h3>
-            <p>确定删除会话 "${this.selected?.metadataKey || this.selected?.key}"？</p>
+            <h3>${t("sessions.deleteTitle")}</h3>
+            <p>${t("sessions.deleteConfirm")} "${this.selected?.metadataKey || this.selected?.key}"？</p>
             <div class="dialog-actions">
-              <button class="btn-cancel-dialog" @click=${this.cancelDelete}>取消</button>
-              <button class="btn-confirm-delete" @click=${this.doDeleteSession}>删除</button>
+              <button class="btn-cancel-dialog" @click=${this.cancelDelete}>${t("common.cancel")}</button>
+              <button class="btn-confirm-delete" @click=${this.doDeleteSession}>${t("common.delete")}</button>
             </div>
           </div>
         </div>

@@ -3,7 +3,8 @@ import { customElement, state } from "lit/decorators.js";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { api } from "../api/client.js";
 import { highlightFile } from "../utils/markdown.js";
-import hljsStyles from "highlight.js/styles/github-dark.css?inline";
+import { hljsThemeCSS as hljsStyles } from "../utils/hljs-theme.js";
+import { t } from "../i18n.js";
 
 @customElement("status-page")
 export class StatusPage extends LitElement {
@@ -177,7 +178,7 @@ export class StatusPage extends LitElement {
     /* Modal overlay */
     .modal-overlay {
       position: fixed; inset: 0; z-index: 1000;
-      background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);
+      background: var(--overlay-bg); backdrop-filter: blur(4px);
       display: flex; align-items: center; justify-content: center;
       animation: fadeIn 0.15s ease-out;
     }
@@ -235,7 +236,7 @@ export class StatusPage extends LitElement {
     .modal-btn.cancel:hover { color: var(--text-primary); }
     .modal-btn.save {
       background: var(--green); border: 1px solid var(--green);
-      color: #000; font-weight: 700;
+      color: var(--accent-on-green-strong); font-weight: 700;
     }
     .modal-btn.save:hover { background: #5ee898; }
     .modal-btn.save:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -310,23 +311,23 @@ export class StatusPage extends LitElement {
 
   render() {
     if (this.error) return html`<div class="error">${this.error}</div>`;
-    if (!this.data) return html`<div style="color:var(--text-muted)">加载中...</div>`;
+    if (!this.data) return html`<div style="color:var(--text-muted)">${t("common.loading")}</div>`;
 
     const d = this.data;
     const running = d.gateway?.running;
 
     return html`
       <div class="page-header">
-        <h1>系统状态</h1>
-        <button class="refresh-btn ${this.refreshing ? "spinning" : ""}" @click=${this.refresh} title="刷新">&#x21bb;</button>
+        <h1>${t("status.title")}</h1>
+        <button class="refresh-btn ${this.refreshing ? "spinning" : ""}" @click=${this.refresh} title="${t("common.refresh")}">&#x21bb;</button>
       </div>
 
       <div class="grid">
         <div class="card">
-          <h3>网关</h3>
+          <h3>${t("status.gateway")}</h3>
           <span class="status-badge ${running ? "running" : "stopped"}">
             <span class="pulse-dot ${running ? "on" : "off"}"></span>
-            ${running ? "运行中" : "已停止"}
+            ${running ? t("status.running") : t("status.stopped")}
           </span>
           ${running && d.gateway.pids?.length
             ? html`<div class="pid-text">PID ${d.gateway.pids.join(", ")}</div>`
@@ -334,13 +335,13 @@ export class StatusPage extends LitElement {
         </div>
 
         <div class="card">
-          <h3>模型</h3>
+          <h3>${t("status.model")}</h3>
           <div class="model-value">${d.model}</div>
-          ${d.compactModel ? html`<div class="compact-model">紧凑模式：<span>${d.compactModel}</span></div>` : ""}
+          ${d.compactModel ? html`<div class="compact-model">${t("status.compactModel")}<span>${d.compactModel}</span></div>` : ""}
         </div>
 
         <div class="card clickable" @click=${() => this._navigate("sessions")}>
-          <h3>频道</h3>
+          <h3>${t("status.channels")}</h3>
           <div class="channel-list">
             ${Object.entries(d.channels || {}).map(
               ([name, ch]: [string, any]) => html`
@@ -353,24 +354,24 @@ export class StatusPage extends LitElement {
         </div>
 
         <div class="card clickable" @click=${() => this._navigate("cron")}>
-          <h3>定时任务</h3>
+          <h3>${t("status.cronJobs")}</h3>
           <div class="cron-value">
-            ${d.cron?.enabled}<span> / ${d.cron?.total} 个活跃</span>
+            ${d.cron?.enabled}<span> / ${d.cron?.total}${t("status.activeCount")}</span>
           </div>
         </div>
 
         <div class="card clickable" @click=${() => this._navigate("skills")}>
-          <h3>技能</h3>
+          <h3>${t("status.skills")}</h3>
           <div class="cron-value">
-            ${d.skillsCount}<span> 个已安装</span>
+            ${d.skillsCount}<span>${t("status.installed")}</span>
           </div>
         </div>
 
         ${d.knowledgeCount ? html`
           <div class="card clickable" @click=${() => this._navigate("knowledge")}>
-            <h3>知识库</h3>
+            <h3>${t("status.knowledge")}</h3>
             <div class="cron-value">
-              ${d.knowledgeCount}<span> 篇文章</span>
+              ${d.knowledgeCount}<span>${t("status.articles")}</span>
             </div>
           </div>
         ` : ""}
@@ -379,8 +380,8 @@ export class StatusPage extends LitElement {
       ${this.config
         ? html`
             <div class="config-header">
-              <div class="section-title">配置（已脱敏）</div>
-              <button class="edit-btn" @click=${this.openConfigEditor}>编辑</button>
+              <div class="section-title">${t("status.config")}</div>
+              <button class="edit-btn" @click=${this.openConfigEditor}>${t("common.edit")}</button>
             </div>
             <div class="config-json">${unsafeHTML(highlightFile(JSON.stringify(this.config, null, 2), "json"))}</div>
           `
@@ -390,7 +391,7 @@ export class StatusPage extends LitElement {
         <div class="modal-overlay" @click=${(e: Event) => { if (e.target === e.currentTarget) this.showConfigModal = false; }}>
           <div class="modal">
             <div class="modal-header">
-              <h2>编辑 config.json</h2>
+              <h2>${t("status.editConfig")}</h2>
               <button class="modal-close" @click=${() => this.showConfigModal = false}>&times;</button>
             </div>
             <div class="modal-body">
@@ -402,9 +403,9 @@ export class StatusPage extends LitElement {
             </div>
             <div class="modal-footer">
               ${this.configError ? html`<div class="config-err">${this.configError}</div>` : ""}
-              <button class="modal-btn cancel" @click=${() => this.showConfigModal = false}>取消</button>
+              <button class="modal-btn cancel" @click=${() => this.showConfigModal = false}>${t("common.cancel")}</button>
               <button class="modal-btn save" ?disabled=${this.configSaving} @click=${this.saveConfig}>
-                ${this.configSaving ? "保存中..." : "保存"}
+                ${this.configSaving ? t("common.saving") : t("common.save")}
               </button>
             </div>
           </div>

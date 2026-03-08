@@ -1,6 +1,7 @@
 import { LitElement, html, css } from "lit";
 import { customElement, state, query } from "lit/decorators.js";
 import { api } from "../api/client.js";
+import { t } from "../i18n.js";
 
 interface SearchMatch {
   line: number;
@@ -30,7 +31,7 @@ export class SearchModal extends LitElement {
   static styles = css`
     .overlay {
       position: fixed; inset: 0; z-index: 2000;
-      background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);
+      background: var(--overlay-bg); backdrop-filter: blur(4px);
       display: flex; align-items: flex-start; justify-content: center;
       padding-top: 12vh;
     }
@@ -240,9 +241,9 @@ export class SearchModal extends LitElement {
 
   private groupLabel(group: string): string {
     const labels: Record<string, string> = {
-      workspace: "工作区",
-      memory: "记忆",
-      knowledge: "知识库",
+      workspace: t("search.workspace"),
+      memory: t("search.memory"),
+      knowledge: t("search.knowledgeBase"),
     };
     return labels[group] || group;
   }
@@ -255,7 +256,7 @@ export class SearchModal extends LitElement {
           <div class="search-input-wrapper">
             <span class="search-icon">🔍</span>
             <input
-              placeholder="搜索文件名或内容..."
+              placeholder="${t("search.placeholder")}"
               .value=${this.queryText}
               @input=${this.onInput}
               autofocus
@@ -264,11 +265,11 @@ export class SearchModal extends LitElement {
           </div>
           <div class="results">
             ${this.loading
-              ? html`<div class="loading-indicator">搜索中...</div>`
+              ? html`<div class="loading-indicator">${t("search.searching")}</div>`
               : this.queryText.trim().length >= 2 && !this.results.length
-              ? html`<div class="empty-state">没有找到匹配结果</div>`
+              ? html`<div class="empty-state">${t("search.noResults")}</div>`
               : this.queryText.trim().length < 2 && !this.results.length
-              ? html`<div class="empty-state">输入关键词搜索文件</div>`
+              ? html`<div class="empty-state">${t("search.inputHint")}</div>`
               : this.results.map(
                   (r, i) => html`
                     <div
@@ -300,9 +301,9 @@ export class SearchModal extends LitElement {
                 )}
           </div>
           <div class="footer-hint">
-            <span><span class="kbd">↑↓</span> 导航</span>
-            <span><span class="kbd">Enter</span> 跳转</span>
-            <span><span class="kbd">Esc</span> 关闭</span>
+            <span><span class="kbd">↑↓</span> ${t("search.navigate")}</span>
+            <span><span class="kbd">Enter</span> ${t("search.jump")}</span>
+            <span><span class="kbd">Esc</span> ${t("search.close")}</span>
           </div>
         </div>
       </div>

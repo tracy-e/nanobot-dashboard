@@ -3,7 +3,8 @@ import { customElement, state } from "lit/decorators.js";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { api } from "../api/client.js";
 import { renderMarkdown } from "../utils/markdown.js";
-import hljsStyles from "highlight.js/styles/github-dark.css?inline";
+import { hljsThemeCSS as hljsStyles } from "../utils/hljs-theme.js";
+import { t } from "../i18n.js";
 
 @customElement("skills-page")
 export class SkillsPage extends LitElement {
@@ -166,7 +167,7 @@ export class SkillsPage extends LitElement {
     /* ---- Delete Confirm Dialog ---- */
     .dialog-overlay {
       position: fixed; inset: 0; z-index: 1000;
-      background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+      background: var(--overlay-bg); backdrop-filter: blur(4px);
       display: flex; align-items: center; justify-content: center;
     }
     .dialog {
@@ -333,7 +334,7 @@ export class SkillsPage extends LitElement {
   }
 
   private renderFileContent() {
-    if (!this.activeFile) return html`<div class="empty">未选择文件</div>`;
+    if (!this.activeFile) return html`<div class="empty">${t("skills.noFile")}</div>`;
     if (this.activeFile.endsWith(".md")) {
       return html`<div class="md-preview">${unsafeHTML(renderMarkdown(this.fileContent))}</div>`;
     }
@@ -343,13 +344,13 @@ export class SkillsPage extends LitElement {
   render() {
     return html`
       <div class="page-header">
-        <h1>技能</h1>
-        <button class="refresh-btn ${this.refreshing ? "spinning" : ""}" @click=${this.refresh} title="刷新">&#x21bb;</button>
+        <h1>${t("skills.title")}</h1>
+        <button class="refresh-btn ${this.refreshing ? "spinning" : ""}" @click=${this.refresh} title="${t("common.refresh")}">&#x21bb;</button>
       </div>
       ${this.error ? html`<div class="error">${this.error}</div>` : ""}
       <div class="layout">
         <div class="list-panel ${this.mobileShowDetail ? "hidden" : ""}">
-          <div class="stat">${this.skills.length} 个技能</div>
+          <div class="stat">${this.skills.length}${t("skills.count")}</div>
           ${this.skills.map(
             (s) => html`
               <div
@@ -369,11 +370,11 @@ export class SkillsPage extends LitElement {
         </div>
         <div class="detail-panel ${!this.mobileShowDetail ? "hidden" : ""}">
           ${!this.selected
-            ? html`<div class="empty">选择技能以查看</div>`
+            ? html`<div class="empty">${t("skills.selectToView")}</div>`
             : html`
                 <div class="detail-header">
                   <div class="detail-header-left">
-                    <button class="back-btn" @click=${this.goBackToList}>← 返回</button>
+                    <button class="back-btn" @click=${this.goBackToList}>${t("common.back")}</button>
                     <h2>${this.selected.name}</h2>
                     <div class="file-tabs">
                       ${this.selected.files.map(
@@ -389,14 +390,14 @@ export class SkillsPage extends LitElement {
                   <div class="detail-actions">
                     ${this.editing
                       ? html`
-                          <button class="btn btn-cancel" @click=${this.cancelEdit}>取消</button>
+                          <button class="btn btn-cancel" @click=${this.cancelEdit}>${t("common.cancel")}</button>
                           <button class="btn btn-save" @click=${this.saveEdit} ?disabled=${this.saving}>
-                            ${this.saving ? "保存中..." : "保存"}
+                            ${this.saving ? t("common.saving") : t("common.save")}
                           </button>
                         `
                       : html`
-                          <button class="btn btn-edit" @click=${this.startEdit}>编辑</button>
-                          <button class="btn btn-danger" @click=${this.confirmDeleteSkill}>删除</button>
+                          <button class="btn btn-edit" @click=${this.startEdit}>${t("common.edit")}</button>
+                          <button class="btn btn-danger" @click=${this.confirmDeleteSkill}>${t("common.delete")}</button>
                         `}
                   </div>
                 </div>
@@ -415,11 +416,11 @@ export class SkillsPage extends LitElement {
       ${this.showDeleteConfirm ? html`
         <div class="dialog-overlay">
           <div class="dialog">
-            <h3>删除技能</h3>
-            <p>确定删除技能 "${this.selected?.name}"？将移除整个目录。</p>
+            <h3>${t("skills.deleteTitle")}</h3>
+            <p>${t("skills.deleteConfirm")} "${this.selected?.name}"？${t("skills.deleteNote")}</p>
             <div class="dialog-actions">
-              <button class="btn-cancel-dialog" @click=${this.cancelDelete}>取消</button>
-              <button class="btn-confirm-delete" @click=${this.doDeleteSkill}>删除</button>
+              <button class="btn-cancel-dialog" @click=${this.cancelDelete}>${t("common.cancel")}</button>
+              <button class="btn-confirm-delete" @click=${this.doDeleteSkill}>${t("common.delete")}</button>
             </div>
           </div>
         </div>

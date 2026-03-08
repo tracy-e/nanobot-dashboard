@@ -1,6 +1,7 @@
 import { LitElement, html, css } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { api } from "../api/client.js";
+import { t } from "../i18n.js";
 
 @customElement("media-page")
 export class MediaPage extends LitElement {
@@ -59,12 +60,16 @@ export class MediaPage extends LitElement {
       width: 36px; height: 36px; border-radius: var(--r-sm);
       display: flex; align-items: center; justify-content: center;
       font-size: 16px; flex-shrink: 0;
+      overflow: hidden;
     }
     .file-icon.image { background: var(--purple-soft); color: var(--purple); }
     .file-icon.audio { background: var(--blue-soft); color: var(--blue); }
     .file-icon.video { background: var(--orange-soft); color: var(--orange); }
     .file-icon.text { background: var(--green-soft); color: var(--green); }
     .file-icon.other { background: var(--bg-elevated); color: var(--text-muted); }
+    .file-icon img {
+      width: 100%; height: 100%; object-fit: cover;
+    }
     .dir-header {
       padding: 8px 16px; cursor: pointer;
       display: flex; align-items: center; gap: 8px;
@@ -137,7 +142,7 @@ export class MediaPage extends LitElement {
     /* ---- Delete Confirm Dialog ---- */
     .dialog-overlay {
       position: fixed; inset: 0; z-index: 1000;
-      background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+      background: var(--overlay-bg); backdrop-filter: blur(4px);
       display: flex; align-items: center; justify-content: center;
     }
     .dialog {
@@ -282,7 +287,7 @@ export class MediaPage extends LitElement {
   }
 
   private renderPreview() {
-    if (!this.selected) return html`<div class="empty">选择文件以预览</div>`;
+    if (!this.selected) return html`<div class="empty">${t("media.selectToPreview")}</div>`;
     const url = api.mediaUrl(this.selected.path);
     switch (this.selected.type) {
       case "image":
@@ -297,18 +302,23 @@ export class MediaPage extends LitElement {
         return html`<div class="empty">
           <div style="font-size:32px;margin-bottom:12px">📦</div>
           <div>${this.selected.mime}</div>
-          <div style="margin-top:8px"><a href=${url} download style="color:var(--blue)">下载</a></div>
+          <div style="margin-top:8px"><a href=${url} download style="color:var(--blue)">${t("common.download")}</a></div>
         </div>`;
     }
   }
 
   private renderFileItem(f: any) {
+    const isImage = f.type === "image";
     return html`
       <div
         class="file-item ${this.selected?.path === f.path ? "active" : ""}"
         @click=${() => this.selectFile(f)}
       >
-        <div class="file-icon ${f.type}">${this.typeIcon(f.type)}</div>
+        <div class="file-icon ${f.type}">
+          ${isImage
+            ? html`<img src="${api.mediaUrl(f.path)}" alt="${f.name}" loading="lazy" />`
+            : this.typeIcon(f.type)}
+        </div>
         <div class="file-info">
           <div class="file-name">${f.name}</div>
           <div class="file-meta">
@@ -358,25 +368,25 @@ export class MediaPage extends LitElement {
   render() {
     return html`
       <div class="page-header">
-        <h1>媒体</h1>
-        <button class="refresh-btn ${this.refreshing ? "spinning" : ""}" @click=${this.refresh} title="刷新">&#x21bb;</button>
+        <h1>${t("media.title")}</h1>
+        <button class="refresh-btn ${this.refreshing ? "spinning" : ""}" @click=${this.refresh} title="${t("common.refresh")}">&#x21bb;</button>
       </div>
       ${this.error ? html`<div class="error">${this.error}</div>` : ""}
       <div class="layout">
         <div class="list-panel ${this.mobileShowDetail ? "hidden" : ""}">
-          <div class="stat">${this.files.length} 个文件</div>
+          <div class="stat">${this.files.length}${t("media.fileCount")}</div>
           ${this.renderFileList()}
         </div>
         <div class="preview-panel ${!this.mobileShowDetail ? "hidden" : ""}">
           ${!this.selected
-            ? html`<div class="empty">选择文件以预览</div>`
+            ? html`<div class="empty">${t("media.selectToPreview")}</div>`
             : html`
                 <div class="preview-header">
                   <div style="display:flex;align-items:center;min-width:0">
-                    <button class="back-btn" @click=${this.goBackToList}>← 返回</button>
+                    <button class="back-btn" @click=${this.goBackToList}>${t("common.back")}</button>
                     <h2>${this.selected.path}</h2>
                   </div>
-                  <button class="delete-btn" @click=${this.confirmDelete}>删除</button>
+                  <button class="delete-btn" @click=${this.confirmDelete}>${t("common.delete")}</button>
                 </div>
                 <div class="preview-body">
                   ${this.renderPreview()}
@@ -387,11 +397,11 @@ export class MediaPage extends LitElement {
       ${this.showDeleteConfirm ? html`
         <div class="dialog-overlay">
           <div class="dialog">
-            <h3>删除文件</h3>
-            <p>确定删除 "${this.selected?.path}"？此操作不可撤销。</p>
+            <h3>${t("media.deleteTitle")}</h3>
+            <p>${t("media.deleteConfirm")} "${this.selected?.path}"？${t("media.deleteNote")}</p>
             <div class="dialog-actions">
-              <button class="btn-cancel" @click=${this.cancelDelete}>取消</button>
-              <button class="btn-confirm-delete" @click=${this.doDelete}>删除</button>
+              <button class="btn-cancel" @click=${this.cancelDelete}>${t("common.cancel")}</button>
+              <button class="btn-confirm-delete" @click=${this.doDelete}>${t("common.delete")}</button>
             </div>
           </div>
         </div>

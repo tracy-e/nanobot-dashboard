@@ -42,6 +42,57 @@
         --ease: cubic-bezier(0.4, 0, 0.2, 1);
         --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
         --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+        /* Semantic tokens */
+        --overlay-bg: rgba(0,0,0,0.55);
+        --msg-user-bg: linear-gradient(135deg, #1A365D, #1E3A5F);
+        --msg-user-text: #DBEAFE;
+        --msg-user-border: rgba(96, 165, 250, 0.12);
+        --msg-user-link: #93C5FD;
+        --msg-user-code-bg: rgba(255,255,255,0.12);
+        --msg-user-pre-bg: rgba(0,0,0,0.25);
+        --msg-user-pre-border: rgba(255,255,255,0.08);
+        --accent-on-green: #0a0f0d;
+        --accent-on-green-strong: #000;
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg-root: #F4F5F7;
+          --bg-surface: #FFFFFF;
+          --bg-card: #FFFFFF;
+          --bg-elevated: #F0F1F5;
+          --bg-hover: #E8EAF0;
+          --bg-input: #F8F9FB;
+          --border-subtle: #E5E7EB;
+          --border-default: #D1D5DB;
+          --border-strong: #9CA3AF;
+          --text-primary: #111827;
+          --text-secondary: #4B5563;
+          --text-muted: #9CA3AF;
+          --green: #16A34A;
+          --green-dim: #15803D;
+          --green-soft: rgba(22, 163, 74, 0.08);
+          --green-glow: rgba(22, 163, 74, 0.04);
+          --orange: #D97706;
+          --orange-soft: rgba(217, 119, 6, 0.08);
+          --blue: #2563EB;
+          --blue-soft: rgba(37, 99, 235, 0.08);
+          --red: #DC2626;
+          --red-soft: rgba(220, 38, 38, 0.08);
+          --purple: #7C3AED;
+          --purple-soft: rgba(124, 58, 237, 0.08);
+          --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+          --shadow-elevated: 0 4px 16px rgba(0,0,0,0.08);
+          --overlay-bg: rgba(0,0,0,0.3);
+          --msg-user-bg: linear-gradient(135deg, #DBEAFE, #BFDBFE);
+          --msg-user-text: #1E3A5F;
+          --msg-user-border: rgba(37, 99, 235, 0.15);
+          --msg-user-link: #2563EB;
+          --msg-user-code-bg: rgba(37, 99, 235, 0.08);
+          --msg-user-pre-bg: rgba(37, 99, 235, 0.06);
+          --msg-user-pre-border: rgba(37, 99, 235, 0.12);
+          --accent-on-green: #fff;
+          --accent-on-green-strong: #fff;
+        }
       }
       * { margin: 0; padding: 0; box-sizing: border-box; }
       html, body { height: 100%; }
