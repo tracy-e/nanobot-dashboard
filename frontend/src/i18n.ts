@@ -13,6 +13,9 @@ const zh: Record<string, string> = {
   "common.confirm": "确定",
   "common.search": "搜索",
   "common.download": "下载",
+  "common.name": "名称",
+  "common.newest": "最新",
+  "common.oldest": "最早",
 
   // nav
   "nav.status": "状态",
@@ -188,6 +191,9 @@ const en: Record<string, string> = {
   "common.confirm": "Confirm",
   "common.search": "Search",
   "common.download": "Download",
+  "common.name": "Name",
+  "common.newest": "Newest",
+  "common.oldest": "Oldest",
 
   // nav
   "nav.status": "Status",

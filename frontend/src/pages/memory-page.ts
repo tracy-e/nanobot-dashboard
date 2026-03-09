@@ -22,6 +22,7 @@ export class MemoryPage extends FileViewer {
       this.groupLabels = Object.fromEntries(
         this.groups.map(g => [g, g.charAt(0).toUpperCase() + g.slice(1)])
       );
+      this.initCollapsedDirs();
     } catch (e: any) {
       this.error = e.message;
     }

@@ -6,6 +6,7 @@ import { t } from "../i18n.js";
 export class KnowledgePage extends FileViewer {
   get pageTitle() { return t("knowledge.title"); }
   readonly groups = ["knowledge"];
+  protected showSortControls = true;
   get groupLabels() {
     return { knowledge: t("knowledge.group") };
   }

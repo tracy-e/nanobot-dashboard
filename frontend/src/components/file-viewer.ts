@@ -25,6 +25,26 @@ export abstract class FileViewer extends LitElement {
   @state() protected refreshing = false;
   @state() private collapsedDirs: Set<string> = new Set();
   @state() private showDeleteConfirm = false;
+  @state() protected sortMode: "name" | "time-asc" | "time-desc" = "name";
+
+  /** Override to true to show sort controls */
+  protected showSortControls = false;
+
+  private get _sortStorageKey() {
+    return `nanobot-sort-${this.groups.join(",")}`;
+  }
+
+  private _setSortMode(mode: "name" | "time-asc" | "time-desc") {
+    this.sortMode = mode;
+    try { localStorage.setItem(this._sortStorageKey, mode); } catch {}
+  }
+
+  private _loadSortMode() {
+    try {
+      const v = localStorage.getItem(this._sortStorageKey);
+      if (v === "name" || v === "time-asc" || v === "time-desc") this.sortMode = v;
+    } catch {}
+  }
 
   static styles = css`
     ${unsafeCSS(hljsStyles)}
@@ -61,6 +81,24 @@ export abstract class FileViewer extends LitElement {
     }
     .tree-list { flex: 1; overflow-y: auto; }
 
+    .sort-bar {
+      display: flex; align-items: center; gap: 4px;
+      padding: 8px 12px; border-bottom: 1px solid var(--border-subtle);
+      background: var(--bg-surface);
+    }
+    .sort-btn {
+      padding: 4px 10px; font-size: 11px; font-weight: 500;
+      border: 1px solid var(--border-default); border-radius: var(--r-sm);
+      background: transparent; color: var(--text-muted);
+      cursor: pointer; font-family: var(--font-sans);
+      transition: all 0.15s var(--ease);
+    }
+    .sort-btn:hover { color: var(--text-secondary); border-color: var(--text-muted); }
+    .sort-btn.active {
+      color: var(--green); border-color: var(--green);
+      background: var(--green-glow);
+    }
+
     .tree-group {
       padding: 10px 16px 6px; font-size: 10px; font-weight: 700;
       text-transform: uppercase; letter-spacing: 1.2px; color: var(--green);
@@ -68,18 +106,21 @@ export abstract class FileViewer extends LitElement {
       position: sticky; top: 0; z-index: 1;
     }
     .tree-dir {
-      padding: 6px 16px 6px 16px; font-size: 12px; font-weight: 600;
+      padding: 7px 16px; font-size: 12px; font-weight: 600;
       color: var(--text-secondary); cursor: pointer; user-select: none;
       display: flex; align-items: center; gap: 6px;
-      transition: color 0.12s var(--ease);
+      transition: all 0.12s var(--ease);
+      margin: 2px 8px; border-radius: var(--r-sm);
+      background: var(--bg-surface);
     }
-    .tree-dir:hover { color: var(--text-primary); }
+    .tree-dir:hover { color: var(--text-primary); background: var(--bg-elevated); }
     .tree-dir .chevron {
       font-size: 10px; transition: transform 0.15s var(--ease);
       display: inline-block; width: 12px; text-align: center;
+      color: var(--text-muted);
     }
     .tree-dir .chevron.collapsed { transform: rotate(-90deg); }
-    .tree-dir .dir-icon { font-size: 13px; opacity: 0.7; }
+    .tree-dir .dir-icon { font-size: 13px; opacity: 0.8; }
 
     /* Directory children container — tree guide line */
     .dir-children {
@@ -253,6 +294,7 @@ export abstract class FileViewer extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    this._loadSortMode();
     this.load();
     window.addEventListener("dashboard-file-navigate", this._onFileNavigate as EventListener);
   }
@@ -295,9 +337,27 @@ export abstract class FileViewer extends LitElement {
       const res = await api.getMemoryFiles();
       const allowed = new Set(this.groups);
       this.files = (res.files || []).filter((f: any) => allowed.has(f.group));
+      // Default-collapse all subdirectories on first load
+      if (this.collapsedDirs.size === 0 && this.files.length) {
+        this.initCollapsedDirs();
+      }
     } catch (e: any) {
       this.error = e.message;
     }
+  }
+
+  protected initCollapsedDirs() {
+    const dirs = new Set<string>();
+    const sections = this.groupBySection();
+    for (const g of this.groups) {
+      const items = sections[g];
+      if (!items?.length) continue;
+      const subs = this.subGroup(items, g);
+      for (const sub of subs) {
+        if (sub.dir) dirs.add(`${g}/${sub.dir}`);
+      }
+    }
+    if (dirs.size) this.collapsedDirs = dirs;
   }
 
   async selectFile(path: string) {
@@ -396,12 +456,9 @@ export abstract class FileViewer extends LitElement {
 
     for (const f of files) {
       const parts = f.path.split("/");
-      const dir =
-        groupKey === "workspace"
-          ? ""
-          : parts.length > 2
-          ? parts.slice(1, -1).join("/")
-          : "";
+      let dir = parts.length > 2 ? parts.slice(1, -1).join("/") : "";
+      // Strip top-level dir that matches the group name (e.g. "knowledge" in knowledge page)
+      if (dir === groupKey) dir = "";
       if (dir !== currentDir) {
         if (currentFiles.length) out.push({ dir: currentDir, files: currentFiles });
         currentDir = dir;
@@ -411,6 +468,16 @@ export abstract class FileViewer extends LitElement {
     }
     if (currentFiles.length) out.push({ dir: currentDir, files: currentFiles });
     return out;
+  }
+
+  private sortFiles(files: any[] | undefined): any[] | undefined {
+    if (!files || this.sortMode === "name") return files;
+    const sorted = [...files];
+    sorted.sort((a, b) => {
+      const ta = a.mtime || 0, tb = b.mtime || 0;
+      return this.sortMode === "time-desc" ? tb - ta : ta - tb;
+    });
+    return sorted;
   }
 
   protected formatSize(bytes: number) {
@@ -448,9 +515,19 @@ export abstract class FileViewer extends LitElement {
       ${this.error ? html`<div class="error">${this.error}</div>` : ""}
       <div class="layout">
         <div class="tree-panel">
+          ${this.showSortControls ? html`
+            <div class="sort-bar">
+              <button class="sort-btn ${this.sortMode === "name" ? "active" : ""}"
+                @click=${() => this._setSortMode("name")}>${t("common.name")}</button>
+              <button class="sort-btn ${this.sortMode === "time-desc" ? "active" : ""}"
+                @click=${() => this._setSortMode("time-desc")}>${t("common.newest")}</button>
+              <button class="sort-btn ${this.sortMode === "time-asc" ? "active" : ""}"
+                @click=${() => this._setSortMode("time-asc")}>${t("common.oldest")}</button>
+            </div>
+          ` : ""}
           <div class="tree-list">
             ${this.groups.map((g) => {
-              const items = sections[g];
+              const items = this.sortFiles(sections[g]);
               if (!items?.length) return "";
               const subs = this.subGroup(items, g);
               return html`

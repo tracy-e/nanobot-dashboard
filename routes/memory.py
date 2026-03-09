@@ -33,12 +33,14 @@ def _walk_dir(base: Path, group: str) -> list[dict]:
         for fname in sorted(filenames):
             fp = Path(dirpath) / fname
             if fp.suffix in ALLOWED_EXTENSIONS and not fname.startswith("."):
+                st = fp.stat()
                 # Path relative to WORKSPACE_DIR (logical, not resolved)
                 rel = os.path.relpath(str(fp), str(WORKSPACE_DIR))
                 files.append({
                     "path": rel,
                     "name": fname,
-                    "sizeBytes": fp.stat().st_size,
+                    "sizeBytes": st.st_size,
+                    "mtime": st.st_mtime,
                     "group": group,
                 })
     return files
@@ -57,10 +59,12 @@ def _scan_files():
     # Workspace root files (non-recursive)
     for f in sorted(WORKSPACE_DIR.glob("*.md")):
         if not f.name.startswith("."):
+            st = f.stat()
             files.append({
                 "path": f.name,
                 "name": f.name,
-                "sizeBytes": f.stat().st_size,
+                "sizeBytes": st.st_size,
+                "mtime": st.st_mtime,
                 "group": "workspace",
             })
 
@@ -76,11 +80,13 @@ def _scan_files():
                 for fname in sorted(filenames):
                     fp = Path(dirpath) / fname
                     if fp.suffix in ALLOWED_EXTENSIONS and not fname.startswith("."):
+                        st = fp.stat()
                         rel = os.path.relpath(str(fp), str(WORKSPACE_DIR))
                         files.append({
                             "path": rel,
                             "name": fname,
-                            "sizeBytes": fp.stat().st_size,
+                            "sizeBytes": st.st_size,
+                            "mtime": st.st_mtime,
                             "group": "memory",
                         })
             # knowledge/ (symlink under memory/)
