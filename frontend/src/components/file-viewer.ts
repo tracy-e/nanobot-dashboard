@@ -26,6 +26,7 @@ export abstract class FileViewer extends LitElement {
   @state() private collapsedDirs: Set<string> = new Set();
   @state() private showDeleteConfirm = false;
   @state() protected sortMode: "name" | "time-asc" | "time-desc" = "name";
+  @state() private mobileShowDetail = false;
 
   /** Override to true to show sort controls */
   protected showSortControls = false;
@@ -157,10 +158,11 @@ export abstract class FileViewer extends LitElement {
     }
     .content-header {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 14px 20px; border-bottom: 1px solid var(--border-subtle);
+      padding: 14px 20px; gap: 10px; border-bottom: 1px solid var(--border-subtle);
       background: var(--bg-surface); flex-shrink: 0;
     }
     .content-header h2 {
+      flex: 1; min-width: 0;
       font-size: 13px; color: var(--text-primary); font-weight: 600;
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
       font-family: var(--font-mono);
@@ -241,6 +243,14 @@ export abstract class FileViewer extends LitElement {
     .btn-cancel { background: transparent; color: var(--text-muted); }
     .btn-cancel:hover { color: var(--text-secondary); }
     .actions { display: flex; gap: 8px; }
+    .back-btn {
+      display: none; padding: 4px 10px; font-size: 12px; font-weight: 500;
+      background: var(--bg-elevated); color: var(--text-secondary);
+      border: 1px solid var(--border-default); border-radius: var(--r-sm);
+      cursor: pointer; font-family: var(--font-sans);
+      transition: all 0.15s var(--ease);
+    }
+    .back-btn:hover { color: var(--text-primary); border-color: var(--text-muted); }
     .empty { color: var(--text-muted); text-align: center; padding: 48px; font-size: 13px; }
     .error { color: var(--red); margin-bottom: 12px; font-size: 13px; }
 
@@ -285,8 +295,11 @@ export abstract class FileViewer extends LitElement {
     @media (max-width: 768px) {
       h1 { font-size: 20px; }
       .layout { flex-direction: column; height: auto; min-height: calc(100vh - 110px); }
-      .tree-panel { width: 100%; max-height: 40vh; flex-shrink: 0; }
-      .content-panel { flex: 1; min-height: 50vh; }
+      .tree-panel { width: 100%; max-height: 100%; flex-shrink: 0; }
+      .content-panel { flex: 1; min-height: 60vh; }
+      .tree-panel.hidden { display: none; }
+      .content-panel.hidden { display: none; }
+      .back-btn { display: inline-block; }
       .editor-area { min-height: 200px; }
       .content-body { padding: 14px 16px; }
     }
@@ -360,9 +373,14 @@ export abstract class FileViewer extends LitElement {
     if (dirs.size) this.collapsedDirs = dirs;
   }
 
+  private goBackToList() {
+    this.mobileShowDetail = false;
+  }
+
   async selectFile(path: string) {
     this.selectedPath = path;
     this.editing = false;
+    this.mobileShowDetail = true;
     try {
       const res = await api.getMemoryFile(path);
       this.content = res.content;
@@ -514,7 +532,7 @@ export abstract class FileViewer extends LitElement {
       </div>
       ${this.error ? html`<div class="error">${this.error}</div>` : ""}
       <div class="layout">
-        <div class="tree-panel">
+        <div class="tree-panel ${this.mobileShowDetail ? "hidden" : ""}">
           ${this.showSortControls ? html`
             <div class="sort-bar">
               <button class="sort-btn ${this.sortMode === "name" ? "active" : ""}"
@@ -565,11 +583,12 @@ export abstract class FileViewer extends LitElement {
             })}
           </div>
         </div>
-        <div class="content-panel">
+        <div class="content-panel ${!this.mobileShowDetail ? "hidden" : ""}">
           ${!this.selectedPath
             ? html`<div class="empty">${t("fileViewer.selectFile")}</div>`
             : html`
                 <div class="content-header">
+                  <button class="back-btn" @click=${this.goBackToList}>${t("common.back")}</button>
                   <h2>${this.selectedPath}</h2>
                   <div class="actions">
                     ${this.editing

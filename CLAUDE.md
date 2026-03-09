@@ -69,6 +69,10 @@ All paths relative to `NANOBOT_ROOT` (default `~/.nanobot`):
 | Knowledge | `workspace/knowledge/` | Symlink to external dir |
 | Skills | `workspace/skills/*/SKILL.md` | YAML frontmatter + markdown |
 
+## Git Conventions
+
+- Commit messages must be written in **English** (use conventional commits format: `feat:`, `fix:`, `docs:`, etc.)
+
 ## Key Constraints
 
 - `knowledge/` directory is a **symlink** — must use `os.walk(followlinks=True)` and `normpath` instead of `Path.resolve()`
