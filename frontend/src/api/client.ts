@@ -98,4 +98,10 @@ export const api = {
       `/api/media/${path.split("/").map(encodeURIComponent).join("/")}`,
       { method: "DELETE" },
     ),
+  batchDeleteMedia: (paths: string[]) =>
+    request("/api/media/batch-delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paths }),
+    }),
 };

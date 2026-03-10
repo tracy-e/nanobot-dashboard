@@ -5,12 +5,16 @@ Serves files from NANOBOT_ROOT/media/ — supports images, audio, video, text.
 
 import mimetypes
 import os
+import shutil
+import subprocess
 from pathlib import Path
 
 from aiohttp import web
 
 from dashboard.config import MEDIA_DIR
 from dashboard.utils.sanitize import safe_resolve
+
+_HAS_TRASH = shutil.which("trash") is not None
 
 
 def _classify(mime: str) -> str:
@@ -77,6 +81,14 @@ async def get_media_file(request: web.Request) -> web.Response:
     return web.FileResponse(filepath)
 
 
+def _trash_or_unlink(filepath: Path) -> None:
+    """Move file to trash if available, otherwise unlink."""
+    if _HAS_TRASH:
+        subprocess.run(["trash", str(filepath)], check=True)
+    else:
+        filepath.unlink()
+
+
 async def delete_media_file(request: web.Request) -> web.Response:
     """Delete a media file."""
     path = request.match_info["path"]
@@ -89,11 +101,35 @@ async def delete_media_file(request: web.Request) -> web.Response:
     if not filepath.is_file():
         raise web.HTTPNotFound(text="File not found")
 
-    filepath.unlink()
+    _trash_or_unlink(filepath)
     return web.json_response({"deleted": path})
+
+
+async def batch_delete_media(request: web.Request) -> web.Response:
+    """Batch delete media files."""
+    body = await request.json()
+    paths = body.get("paths", [])
+    if not paths or not isinstance(paths, list):
+        raise web.HTTPBadRequest(text="Missing paths array")
+
+    deleted = []
+    errors = []
+    for p in paths:
+        try:
+            filepath = safe_resolve(MEDIA_DIR, p)
+            if not filepath.is_file():
+                errors.append({"path": p, "error": "not found"})
+                continue
+            _trash_or_unlink(filepath)
+            deleted.append(p)
+        except (ValueError, subprocess.CalledProcessError) as e:
+            errors.append({"path": p, "error": str(e)})
+
+    return web.json_response({"deleted": deleted, "errors": errors})
 
 
 def setup(app: web.Application):
     app.router.add_get("/api/media", list_media)
     app.router.add_get("/api/media/{path:.+}", get_media_file)
     app.router.add_delete("/api/media/{path:.+}", delete_media_file)
+    app.router.add_post("/api/media/batch-delete", batch_delete_media)

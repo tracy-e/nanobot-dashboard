@@ -159,7 +159,12 @@ const zh: Record<string, string> = {
   "media.selectToPreview": "选择文件以预览",
   "media.deleteTitle": "删除文件",
   "media.deleteConfirm": "确定删除",
-  "media.deleteNote": "此操作不可撤销。",
+  "media.deleteNote": "文件将被移到废纸篓。",
+  "media.select": "选择",
+  "media.cancelSelect": "取消",
+  "media.selectAll": "全选",
+  "media.batchDelete": "删除({0})",
+  "media.batchDeleteConfirm": "确定删除选中的 {0} 个文件？",
 
   // logs
   "logs.title": "日志",
@@ -337,7 +342,12 @@ const en: Record<string, string> = {
   "media.selectToPreview": "Select a file to preview",
   "media.deleteTitle": "Delete File",
   "media.deleteConfirm": "Delete",
-  "media.deleteNote": " This cannot be undone.",
+  "media.deleteNote": " Files will be moved to trash.",
+  "media.select": "Select",
+  "media.cancelSelect": "Cancel",
+  "media.selectAll": "All",
+  "media.batchDelete": "Delete({0})",
+  "media.batchDeleteConfirm": "Delete {0} selected files?",
 
   // logs
   "logs.title": "Logs",

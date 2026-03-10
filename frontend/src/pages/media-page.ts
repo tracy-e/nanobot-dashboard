@@ -41,11 +41,6 @@ export class MediaPage extends LitElement {
       border-radius: var(--r-lg); box-shadow: var(--shadow-card);
       display: flex; flex-direction: column;
     }
-    .stat {
-      color: var(--text-muted); font-size: 12px; font-weight: 600;
-      padding: 10px 16px; border-bottom: 1px solid var(--border-subtle);
-      background: var(--bg-surface); flex-shrink: 0;
-    }
     .file-item {
       padding: 12px 16px; border-bottom: 1px solid var(--border-subtle);
       cursor: pointer; transition: all 0.12s var(--ease);
@@ -136,6 +131,39 @@ export class MediaPage extends LitElement {
     }
     .delete-btn:hover { background: var(--red-soft); }
 
+    /* ---- Select Mode ---- */
+    .select-bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px; border-bottom: 1px solid var(--border-subtle);
+      background: var(--bg-surface); flex-shrink: 0;
+    }
+    .select-bar .sel-btn {
+      padding: 4px 10px; font-size: 11px; font-weight: 500;
+      border: 1px solid var(--border-default); border-radius: var(--r-sm);
+      background: transparent; color: var(--text-muted);
+      cursor: pointer; font-family: var(--font-sans);
+      transition: all 0.15s var(--ease);
+    }
+    .select-bar .sel-btn:hover { color: var(--text-secondary); border-color: var(--text-muted); }
+    .select-bar .sel-btn.active {
+      color: var(--green); border-color: var(--green); background: var(--green-glow);
+    }
+    .select-bar .sel-btn.danger {
+      color: var(--red); border-color: var(--red-soft);
+    }
+    .select-bar .sel-btn.danger:hover { background: var(--red-soft); }
+    .select-bar .spacer { flex: 1; }
+    .file-item .checkbox {
+      width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0;
+      border: 1.5px solid var(--border-default); background: transparent;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.12s var(--ease);
+      font-size: 11px; color: transparent;
+    }
+    .file-item .checkbox.checked {
+      background: var(--green); border-color: var(--green); color: #fff;
+    }
+
     .empty { color: var(--text-muted); text-align: center; padding: 48px; font-size: 13px; }
     .error { color: var(--red); margin-bottom: 12px; font-size: 13px; }
 
@@ -201,6 +229,9 @@ export class MediaPage extends LitElement {
   @state() private fileText = "";
   @state() private showDeleteConfirm = false;
   @state() private collapsedDirs = new Set<string>();
+  @state() private selecting = false;
+  @state() private selectedPaths = new Set<string>();
+  @state() private showBatchDeleteConfirm = false;
 
   connectedCallback() {
     super.connectedCallback();
@@ -269,6 +300,56 @@ export class MediaPage extends LitElement {
     }
   }
 
+  private enterSelectMode() {
+    this.selecting = true;
+    this.selectedPaths = new Set();
+  }
+
+  private exitSelectMode() {
+    this.selecting = false;
+    this.selectedPaths = new Set();
+  }
+
+  private toggleSelect(path: string) {
+    const next = new Set(this.selectedPaths);
+    if (next.has(path)) next.delete(path);
+    else next.add(path);
+    this.selectedPaths = next;
+  }
+
+  private selectAll() {
+    if (this.selectedPaths.size === this.files.length) {
+      this.selectedPaths = new Set();
+    } else {
+      this.selectedPaths = new Set(this.files.map((f: any) => f.path));
+    }
+  }
+
+  private confirmBatchDelete() {
+    if (!this.selectedPaths.size) return;
+    this.showBatchDeleteConfirm = true;
+  }
+
+  private cancelBatchDelete() {
+    this.showBatchDeleteConfirm = false;
+  }
+
+  async doBatchDelete() {
+    if (!this.selectedPaths.size) return;
+    this.showBatchDeleteConfirm = false;
+    try {
+      await api.batchDeleteMedia([...this.selectedPaths]);
+      if (this.selected && this.selectedPaths.has(this.selected.path)) {
+        this.selected = null;
+        this.mobileShowDetail = false;
+      }
+      this.exitSelectMode();
+      await this.load();
+    } catch (e: any) {
+      this.error = e.message;
+    }
+  }
+
   private typeIcon(type: string): string {
     const icons: Record<string, string> = {
       image: "🖼", audio: "🎵", video: "🎬", text: "📄",
@@ -309,11 +390,15 @@ export class MediaPage extends LitElement {
 
   private renderFileItem(f: any) {
     const isImage = f.type === "image";
+    const checked = this.selectedPaths.has(f.path);
     return html`
       <div
-        class="file-item ${this.selected?.path === f.path ? "active" : ""}"
-        @click=${() => this.selectFile(f)}
+        class="file-item ${this.selected?.path === f.path && !this.selecting ? "active" : ""}"
+        @click=${() => this.selecting ? this.toggleSelect(f.path) : this.selectFile(f)}
       >
+        ${this.selecting ? html`
+          <div class="checkbox ${checked ? "checked" : ""}">✓</div>
+        ` : ""}
         <div class="file-icon ${f.type}">
           ${isImage
             ? html`<img src="${api.mediaUrl(f.path)}" alt="${f.name}" loading="lazy" />`
@@ -374,7 +459,25 @@ export class MediaPage extends LitElement {
       ${this.error ? html`<div class="error">${this.error}</div>` : ""}
       <div class="layout">
         <div class="list-panel ${this.mobileShowDetail ? "hidden" : ""}">
-          <div class="stat">${this.files.length}${t("media.fileCount")}</div>
+          ${this.selecting ? html`
+            <div class="select-bar">
+              <button class="sel-btn ${this.selectedPaths.size === this.files.length ? "active" : ""}"
+                @click=${this.selectAll}>${t("media.selectAll")}</button>
+              <div class="spacer"></div>
+              ${this.selectedPaths.size ? html`
+                <button class="sel-btn danger" @click=${this.confirmBatchDelete}>
+                  ${t("media.batchDelete").replace("{0}", String(this.selectedPaths.size))}
+                </button>
+              ` : ""}
+              <button class="sel-btn" @click=${this.exitSelectMode}>${t("media.cancelSelect")}</button>
+            </div>
+          ` : html`
+            <div class="select-bar">
+              <span style="font-size:12px;color:var(--text-muted);font-weight:600">${this.files.length}${t("media.fileCount")}</span>
+              <div class="spacer"></div>
+              <button class="sel-btn" @click=${this.enterSelectMode}>${t("media.select")}</button>
+            </div>
+          `}
           ${this.renderFileList()}
         </div>
         <div class="preview-panel ${!this.mobileShowDetail ? "hidden" : ""}">
@@ -402,6 +505,18 @@ export class MediaPage extends LitElement {
             <div class="dialog-actions">
               <button class="btn-cancel" @click=${this.cancelDelete}>${t("common.cancel")}</button>
               <button class="btn-confirm-delete" @click=${this.doDelete}>${t("common.delete")}</button>
+            </div>
+          </div>
+        </div>
+      ` : ""}
+      ${this.showBatchDeleteConfirm ? html`
+        <div class="dialog-overlay">
+          <div class="dialog">
+            <h3>${t("media.deleteTitle")}</h3>
+            <p>${t("media.batchDeleteConfirm").replace("{0}", String(this.selectedPaths.size))} ${t("media.deleteNote")}</p>
+            <div class="dialog-actions">
+              <button class="btn-cancel" @click=${this.cancelBatchDelete}>${t("common.cancel")}</button>
+              <button class="btn-confirm-delete" @click=${this.doBatchDelete}>${t("common.delete")}</button>
             </div>
           </div>
         </div>
