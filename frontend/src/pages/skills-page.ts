@@ -64,13 +64,8 @@ export class SkillsPage extends LitElement {
     .skill-name { font-size: 14px; color: var(--text-primary); font-weight: 600; }
     .skill-desc {
       font-size: 12px; color: var(--text-muted); margin-top: 4px;
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    }
-    .skill-files { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; }
-    .file-tag {
-      font-size: 10px; padding: 2px 8px; border-radius: 6px;
-      background: var(--bg-surface); color: var(--text-muted);
-      border: 1px solid var(--border-subtle); font-weight: 500;
+      overflow: hidden; text-overflow: ellipsis;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
     }
 
     /* ---- Detail Panel ---- */
@@ -81,14 +76,16 @@ export class SkillsPage extends LitElement {
       box-shadow: var(--shadow-card);
     }
     .detail-header {
-      display: flex; justify-content: space-between; align-items: center;
       padding: 14px 20px; border-bottom: 1px solid var(--border-subtle);
       background: var(--bg-surface); flex-shrink: 0;
+    }
+    .detail-header-top {
+      display: flex; justify-content: space-between; align-items: center;
     }
     .detail-header h2 { font-size: 14px; color: var(--text-primary); font-weight: 600; margin: 0; }
     .detail-header-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
 
-    .file-tabs { display: flex; gap: 4px; }
+    .file-tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 10px; }
     .file-tab {
       padding: 5px 12px; border-radius: 6px; font-size: 11px;
       cursor: pointer; border: 1px solid var(--border-default);
@@ -221,9 +218,7 @@ export class SkillsPage extends LitElement {
       .back-btn { display: inline-block; }
       .detail-body { padding: 14px 16px; }
       .editor-area { min-height: 200px; }
-      .detail-header { flex-wrap: wrap; gap: 8px; }
-      .detail-header-left { flex-wrap: wrap; }
-      .file-tabs { flex-wrap: wrap; }
+      .detail-header-top { flex-wrap: wrap; gap: 8px; }
     }
     .stat {
       color: var(--text-muted); font-size: 12px; font-weight: 600;
@@ -361,9 +356,6 @@ export class SkillsPage extends LitElement {
                 ${s.description
                   ? html`<div class="skill-desc">${s.description}</div>`
                   : ""}
-                <div class="skill-files">
-                  ${s.files.map((f: string) => html`<span class="file-tag">${f}</span>`)}
-                </div>
               </div>
             `
           )}
@@ -373,32 +365,34 @@ export class SkillsPage extends LitElement {
             ? html`<div class="empty">${t("skills.selectToView")}</div>`
             : html`
                 <div class="detail-header">
-                  <div class="detail-header-left">
-                    <button class="back-btn" @click=${this.goBackToList}>${t("common.back")}</button>
-                    <h2>${this.selected.name}</h2>
-                    <div class="file-tabs">
-                      ${this.selected.files.map(
-                        (f: string) => html`
-                          <button
-                            class="file-tab ${f === this.activeFile ? "active" : ""}"
-                            @click=${() => this.loadFile(this.selected.id, f)}
-                          >${f}</button>
-                        `
-                      )}
+                  <div class="detail-header-top">
+                    <div class="detail-header-left">
+                      <button class="back-btn" @click=${this.goBackToList}>${t("common.back")}</button>
+                      <h2>${this.selected.name}</h2>
+                    </div>
+                    <div class="detail-actions">
+                      ${this.editing
+                        ? html`
+                            <button class="btn btn-cancel" @click=${this.cancelEdit}>${t("common.cancel")}</button>
+                            <button class="btn btn-save" @click=${this.saveEdit} ?disabled=${this.saving}>
+                              ${this.saving ? t("common.saving") : t("common.save")}
+                            </button>
+                          `
+                        : html`
+                            <button class="btn btn-edit" @click=${this.startEdit}>${t("common.edit")}</button>
+                            <button class="btn btn-danger" @click=${this.confirmDeleteSkill}>${t("common.delete")}</button>
+                          `}
                     </div>
                   </div>
-                  <div class="detail-actions">
-                    ${this.editing
-                      ? html`
-                          <button class="btn btn-cancel" @click=${this.cancelEdit}>${t("common.cancel")}</button>
-                          <button class="btn btn-save" @click=${this.saveEdit} ?disabled=${this.saving}>
-                            ${this.saving ? t("common.saving") : t("common.save")}
-                          </button>
-                        `
-                      : html`
-                          <button class="btn btn-edit" @click=${this.startEdit}>${t("common.edit")}</button>
-                          <button class="btn btn-danger" @click=${this.confirmDeleteSkill}>${t("common.delete")}</button>
-                        `}
+                  <div class="file-tabs">
+                    ${this.selected.files.map(
+                      (f: string) => html`
+                        <button
+                          class="file-tab ${f === this.activeFile ? "active" : ""}"
+                          @click=${() => this.loadFile(this.selected.id, f)}
+                        >${f}</button>
+                      `
+                    )}
                   </div>
                 </div>
                 <div class="detail-body">
