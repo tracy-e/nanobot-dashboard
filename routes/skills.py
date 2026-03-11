@@ -57,13 +57,19 @@ def _scan_skills() -> list[dict]:
                 fm = _parse_frontmatter(content)
                 info["name"] = fm.get("name", entry.name)
                 info["description"] = fm.get("description", "")
+                info["frontmatter"] = fm
             except Exception:
                 pass
 
-        # List files in skill dir
-        for f in sorted(entry.iterdir()):
-            if f.is_file() and not f.name.startswith("."):
-                info["files"].append(f.name)
+        # List files recursively in skill dir
+        skip_dirs = {"__pycache__", "node_modules", ".venv", "venv"}
+        for dirpath, dirnames, filenames in os.walk(str(entry)):
+            dirnames[:] = [d for d in dirnames if not d.startswith(".") and d not in skip_dirs]
+            for fname in sorted(filenames):
+                if fname.startswith(".") or fname.endswith((".pyc", ".pyo")):
+                    continue
+                rel = os.path.relpath(os.path.join(dirpath, fname), str(entry))
+                info["files"].append(rel)
 
         skills.append(info)
     return skills
@@ -141,6 +147,6 @@ async def delete_skill(request: web.Request) -> web.Response:
 
 def setup(app: web.Application):
     app.router.add_get("/api/skills", list_skills)
-    app.router.add_get("/api/skills/{id}/{filename}", get_skill_file)
-    app.router.add_put("/api/skills/{id}/{filename}", update_skill_file)
+    app.router.add_get(r"/api/skills/{id}/{filename:.+}", get_skill_file)
+    app.router.add_put(r"/api/skills/{id}/{filename:.+}", update_skill_file)
     app.router.add_delete("/api/skills/{id}", delete_skill)

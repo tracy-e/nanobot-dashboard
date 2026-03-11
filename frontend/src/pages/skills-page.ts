@@ -100,6 +100,29 @@ export class SkillsPage extends LitElement {
     .file-tab:hover:not(.active) { background: var(--bg-hover); color: var(--text-secondary); }
 
     .detail-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+    /* ---- Frontmatter Meta Table ---- */
+    .meta-table {
+      width: 100%; border-collapse: separate; border-spacing: 0;
+      margin-bottom: 20px; border-radius: var(--r-lg); overflow: hidden;
+      border: 1px solid var(--border-default);
+      box-shadow: var(--shadow-card);
+    }
+    .meta-table td { border-bottom: 1px solid var(--border-default); }
+    .meta-table tr:last-child td { border-bottom: none; }
+    .meta-table td {
+      padding: 10px 16px; font-size: 13px; line-height: 1.5;
+      vertical-align: top; border-right: 1px solid var(--border-default);
+    }
+    .meta-table td:last-child { border-right: none; }
+    .meta-key {
+      width: 120px; color: var(--green); font-weight: 600;
+      white-space: nowrap; background: var(--bg-surface);
+    }
+    .meta-val {
+      color: var(--text-primary); word-break: break-word;
+    }
+
     .detail-body {
       flex: 1; overflow-y: auto; padding: 22px 26px;
       font-size: 14px; line-height: 1.7; color: var(--text-secondary);
@@ -328,8 +351,36 @@ export class SkillsPage extends LitElement {
     }
   }
 
+  private stripFrontmatter(text: string): string {
+    return text.replace(/^---\s*\n[\s\S]*?\n---\s*\n?/, "");
+  }
+
+  private renderFrontmatterTable() {
+    const fm = this.selected?.frontmatter;
+    if (!fm || Object.keys(fm).length === 0) return "";
+    return html`
+      <table class="meta-table">
+        ${Object.entries(fm).map(
+          ([k, v]) => html`
+            <tr>
+              <td class="meta-key">${k}</td>
+              <td class="meta-val">${v}</td>
+            </tr>
+          `
+        )}
+      </table>
+    `;
+  }
+
   private renderFileContent() {
     if (!this.activeFile) return html`<div class="empty">${t("skills.noFile")}</div>`;
+    if (this.activeFile === "SKILL.md") {
+      const body = this.stripFrontmatter(this.fileContent);
+      return html`
+        ${this.renderFrontmatterTable()}
+        <div class="md-preview">${unsafeHTML(renderMarkdown(body))}</div>
+      `;
+    }
     if (this.activeFile.endsWith(".md")) {
       return html`<div class="md-preview">${unsafeHTML(renderMarkdown(this.fileContent))}</div>`;
     }
