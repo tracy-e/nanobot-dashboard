@@ -1,5 +1,6 @@
 """Nanobot Dashboard — standalone web dashboard for nanobot."""
 
+import logging
 import sys
 from pathlib import Path
 
@@ -8,7 +9,7 @@ from aiohttp import web
 # Ensure dashboard package is importable
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from dashboard.config import HOST, PORT
+from dashboard.config import HOST, PORT, DASHBOARD_LOG
 from dashboard.utils.auth import auth_middleware
 from dashboard.routes import status, sessions, cron, memory, config_view, skills, logs, media, chat, search
 
@@ -45,10 +46,24 @@ def create_app() -> web.Application:
     return app
 
 
+def setup_logging():
+    fmt = logging.Formatter("%(asctime)s [dashboard] %(levelname)s %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+    fh = logging.FileHandler(DASHBOARD_LOG, encoding="utf-8")
+    fh.setFormatter(fmt)
+    root = logging.getLogger()
+    root.setLevel(logging.INFO)
+    root.addHandler(fh)
+    # Also keep stderr output
+    sh = logging.StreamHandler()
+    sh.setFormatter(fmt)
+    root.addHandler(sh)
+
+
 def main():
+    setup_logging()
     app = create_app()
-    print(f"Nanobot Dashboard starting on http://{HOST}:{PORT}")
-    web.run_app(app, host=HOST, port=PORT, print=None)
+    logging.getLogger().info(f"Dashboard starting on http://{HOST}:{PORT}")
+    web.run_app(app, host=HOST, port=PORT, print=None, access_log=None)
 
 
 if __name__ == "__main__":

@@ -14,6 +14,7 @@ WORKSPACE_DIR = NANOBOT_ROOT / "workspace"
 MEMORY_DIR = NANOBOT_ROOT / "workspace" / "memory"
 MEDIA_DIR = NANOBOT_ROOT / "media"
 GATEWAY_LOG = NANOBOT_ROOT / "gateway.log"
+DASHBOARD_LOG = NANOBOT_ROOT / "dashboard.log"
 
 # Server settings
 HOST = os.environ.get("NANOBOT_DASHBOARD_HOST", "127.0.0.1")

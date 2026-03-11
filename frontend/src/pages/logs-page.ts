@@ -11,7 +11,9 @@ export class LogsPage extends LitElement {
   @state() private totalSize = 0;
   @state() private loading = false;
   @state() private refreshing = false;
+  private live = true;
   @state() private error = "";
+  private liveTimer: ReturnType<typeof setInterval> | null = null;
 
   static styles = css`
     :host { display: block; }
@@ -34,6 +36,7 @@ export class LogsPage extends LitElement {
     .refresh-btn:hover { color: var(--green); border-color: var(--green); background: var(--green-glow); }
     .refresh-btn.spinning { animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
+
 
     /* Tab switcher */
     .tabs {
@@ -72,7 +75,7 @@ export class LogsPage extends LitElement {
       font-family: var(--font-mono);
     }
     .log-meta {
-      font-size: 11px; color: var(--text-muted); display: flex; gap: 16px;
+      font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 16px;
     }
     .log-content {
       padding: 16px 18px;
@@ -111,7 +114,7 @@ export class LogsPage extends LitElement {
   private async loadFiles() {
     try {
       const res = await api.getLogFiles();
-      this.files = res.files || [];
+      this.files = (res.files || []).sort((a: any, b: any) => b.size - a.size);
       if (this.files.length && !this.active) {
         this.active = this.files[0].name;
         this.loadLog(this.active);
@@ -122,6 +125,7 @@ export class LogsPage extends LitElement {
   }
 
   private async loadLog(name: string) {
+    if (this.liveTimer) { clearInterval(this.liveTimer); this.liveTimer = null; }
     this.active = name;
     this.loading = true;
     try {
@@ -140,11 +144,28 @@ export class LogsPage extends LitElement {
       window.dispatchEvent(new CustomEvent("dashboard-file-select", {
         detail: { path: `logs/${name}` },
       }));
+      this.liveTimer = setInterval(() => this.livePoll(), 2000);
+    }
+  }
+
+  private async livePoll() {
+    if (!this.active) return;
+    const el = this.shadowRoot?.querySelector(".log-content");
+    const atBottom = el ? el.scrollTop + el.clientHeight >= el.scrollHeight - 20 : true;
+    try {
+      const res = await api.getLogFile(this.active);
+      this.lines = res.lines || [];
+      this.totalSize = res.totalSize || 0;
+    } catch { /* ignore */ }
+    if (atBottom) {
+      await this.updateComplete;
+      if (el) el.scrollTop = el.scrollHeight;
     }
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
+    if (this.liveTimer) { clearInterval(this.liveTimer); this.liveTimer = null; }
     window.dispatchEvent(new CustomEvent("dashboard-file-select", {
       detail: { path: null },
     }));

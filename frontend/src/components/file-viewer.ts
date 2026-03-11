@@ -190,7 +190,8 @@ export abstract class FileViewer extends LitElement {
     .md-preview pre {
       background: var(--bg-input); border: 1px solid var(--border-subtle);
       border-radius: var(--r-sm); padding: 14px 16px;
-      overflow-x: auto; margin: 10px 0; font-size: 13px; line-height: 1.5;
+      margin: 10px 0; font-size: 13px; line-height: 1.5;
+      white-space: pre-wrap; word-break: break-all;
     }
     .md-preview code { font-family: var(--font-mono); }
     .md-preview :not(pre) > code {
@@ -207,6 +208,16 @@ export abstract class FileViewer extends LitElement {
     .md-preview hr { border: none; border-top: 1px solid var(--border-default); margin: 16px 0; }
     .md-preview strong { color: var(--text-primary); }
     .md-preview img { max-width: 100%; border-radius: var(--r-sm); }
+
+    /* Image preview */
+    .image-preview {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 200px;
+    }
+    .image-preview img {
+      max-width: 100%; max-height: calc(100vh - 220px); object-fit: contain;
+      border-radius: var(--r-sm);
+    }
 
     /* Code-only preview */
     .code-preview pre {
@@ -377,15 +388,24 @@ export abstract class FileViewer extends LitElement {
     this.mobileShowDetail = false;
   }
 
+  private static IMAGE_EXTS = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico"]);
+
+  private isImage(path: string): boolean {
+    return FileViewer.IMAGE_EXTS.has(this.getExt(path).toLowerCase());
+  }
+
   async selectFile(path: string) {
     this.selectedPath = path;
     this.editing = false;
     this.mobileShowDetail = true;
-    try {
-      const res = await api.getMemoryFile(path);
-      this.content = res.content;
-    } catch (e: any) {
-      this.error = e.message;
+    this.content = "";
+    if (!this.isImage(path)) {
+      try {
+        const res = await api.getMemoryFile(path);
+        this.content = res.content;
+      } catch (e: any) {
+        this.error = e.message;
+      }
     }
     window.dispatchEvent(new CustomEvent("dashboard-file-select", { detail: { path } }));
   }
@@ -510,6 +530,9 @@ export abstract class FileViewer extends LitElement {
 
   protected renderContent() {
     const ext = this.getExt(this.selectedPath);
+    if (this.isImage(this.selectedPath)) {
+      return html`<div class="image-preview"><img src="${api.memoryRawUrl(this.selectedPath)}" alt="${this.selectedPath}" /></div>`;
+    }
     if (ext === "md") {
       return html`<div class="md-preview">${unsafeHTML(renderMarkdown(this.content))}</div>`;
     }
@@ -570,7 +593,6 @@ export abstract class FileViewer extends LitElement {
                     ${sub.dir
                       ? html`
                           <div class="tree-dir" @click=${() => this.toggleDir(dirKey)}>
-                            <span class="chevron ${isCollapsed ? "collapsed" : ""}">▾</span>
                             <span class="dir-icon">📁</span>
                             ${sub.dir}/
                           </div>
@@ -600,7 +622,9 @@ export abstract class FileViewer extends LitElement {
                         `
                       : html`
                           <button class="btn btn-delete" @click=${this.confirmDeleteFile}>${t("common.delete")}</button>
-                          <button class="btn btn-edit" @click=${this.startEdit}>${t("common.edit")}</button>
+                          ${!this.isImage(this.selectedPath) ? html`
+                            <button class="btn btn-edit" @click=${this.startEdit}>${t("common.edit")}</button>
+                          ` : ""}
                         `}
                   </div>
                 </div>
