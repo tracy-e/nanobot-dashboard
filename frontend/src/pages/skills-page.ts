@@ -81,6 +81,7 @@ export class SkillsPage extends LitElement {
       letter-spacing: 0.5px; background: var(--bg-surface);
       border-bottom: 1px solid var(--border-subtle);
       position: sticky; top: 0; z-index: 1;
+      display: flex; justify-content: space-between; align-items: center;
     }
 
     /* ---- Detail Panel ---- */
@@ -409,7 +410,10 @@ export class SkillsPage extends LitElement {
 
     return html`
       ${builtinSkills.length > 0 ? html`
-        <div class="section-header">${t("skills.builtInSection")}</div>
+        <div class="section-header">
+          <span>${t("skills.builtInSection")}</span>
+          <span style="color:var(--text-muted);font-weight:500;margin-left:8px">${builtinSkills.length}</span>
+        </div>
         ${builtinSkills.map(
           (s) => html`
             <div
@@ -425,7 +429,10 @@ export class SkillsPage extends LitElement {
         )}
       ` : ""}
       ${workspaceSkills.length > 0 ? html`
-        <div class="section-header">${t("skills.workspaceSection")}</div>
+        <div class="section-header">
+          <span>${t("skills.workspaceSection")}</span>
+          <span style="color:var(--text-muted);font-weight:500;margin-left:8px">${workspaceSkills.length}</span>
+        </div>
         ${workspaceSkills.map(
           (s) => html`
             <div
