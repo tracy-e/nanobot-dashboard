@@ -131,15 +131,11 @@ async def run_job(request: web.Request) -> web.Response:
         raise web.HTTPNotFound(text="Job not found")
 
     try:
-        proc = await asyncio.create_subprocess_exec(
+        await asyncio.create_subprocess_exec(
             "nanobot", "cron", "run", job_id,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
         )
-        stdout, stderr = await proc.communicate()
-        if proc.returncode != 0:
-            msg = (stderr or stdout or b"").decode().strip() or "Unknown error"
-            raise web.HTTPInternalServerError(text=f"Job failed: {msg}")
         return web.json_response({
             "triggered": job_id,
             "note": "Job triggered successfully",
