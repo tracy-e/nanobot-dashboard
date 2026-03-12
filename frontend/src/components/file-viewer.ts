@@ -27,6 +27,9 @@ export abstract class FileViewer extends LitElement {
   @state() private showDeleteConfirm = false;
   @state() protected sortMode: "name" | "time-asc" | "time-desc" = "name";
   @state() private mobileShowDetail = false;
+  @state() protected selecting = false;
+  @state() protected selectedPaths = new Set<string>();
+  @state() private showBatchDeleteConfirm = false;
 
   /** Override to true to show sort controls */
   protected showSortControls = false;
@@ -99,6 +102,34 @@ export abstract class FileViewer extends LitElement {
       color: var(--green); border-color: var(--green);
       background: var(--green-glow);
     }
+    .sort-bar .spacer { flex: 1; }
+
+    /* ---- Select Mode ---- */
+    .sort-bar .sel-btn {
+      padding: 4px 10px; font-size: 11px; font-weight: 500;
+      border: 1px solid var(--border-default); border-radius: var(--r-sm);
+      background: transparent; color: var(--text-muted);
+      cursor: pointer; font-family: var(--font-sans);
+      transition: all 0.15s var(--ease);
+    }
+    .sort-bar .sel-btn:hover { color: var(--text-secondary); border-color: var(--text-muted); }
+    .sort-bar .sel-btn.active {
+      color: var(--green); border-color: var(--green); background: var(--green-glow);
+    }
+    .sort-bar .sel-btn.danger {
+      color: var(--red); border-color: var(--red-soft);
+    }
+    .sort-bar .sel-btn.danger:hover { background: var(--red-soft); }
+    .checkbox {
+      width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0;
+      border: 1.5px solid var(--border-default); background: transparent;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.12s var(--ease);
+      font-size: 11px; color: transparent;
+    }
+    .checkbox.checked {
+      background: var(--green); border-color: var(--green); color: #fff;
+    }
 
     .tree-group {
       padding: 10px 16px 6px; font-size: 10px; font-weight: 700;
@@ -135,7 +166,7 @@ export abstract class FileViewer extends LitElement {
       padding: 8px 16px 8px 16px; font-size: 13px; cursor: pointer;
       color: var(--text-secondary); border-bottom: 1px solid var(--border-subtle);
       transition: all 0.12s var(--ease); display: flex;
-      justify-content: space-between; align-items: center;
+      align-items: center; gap: 8px;
     }
     .tree-item:hover { background: var(--bg-elevated); color: var(--text-primary); }
     .tree-item.active {
@@ -143,7 +174,7 @@ export abstract class FileViewer extends LitElement {
       border-left: 3px solid var(--green);
       color: var(--text-primary);
     }
-    .tree-item .path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+    .tree-item .path { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
     .tree-item .size {
       font-size: 10px; color: var(--text-muted); flex-shrink: 0;
       margin-left: 8px; font-family: var(--font-mono);
@@ -453,6 +484,84 @@ export abstract class FileViewer extends LitElement {
     this.saving = false;
   }
 
+  private enterSelectMode = () => {
+    this.selecting = true;
+    this.selectedPaths = new Set();
+  };
+
+  private exitSelectMode = () => {
+    this.selecting = false;
+    this.selectedPaths = new Set();
+  };
+
+  private toggleSelect = (path: string) => {
+    const next = new Set(this.selectedPaths);
+    if (next.has(path)) next.delete(path);
+    else next.add(path);
+    this.selectedPaths = next;
+  };
+
+  private selectAllFiles = () => {
+    if (this.selectedPaths.size === this.files.length) {
+      this.selectedPaths = new Set();
+    } else {
+      this.selectedPaths = new Set(this.files.map((f: any) => f.path));
+    }
+  };
+
+  private getDirFiles(dirKey: string, groupKey: string): any[] {
+    return this.files.filter((f: any) => {
+      if (f.group !== groupKey) return false;
+      const parts = f.path.split("/");
+      let dir = parts.length > 2 ? parts.slice(1, -1).join("/") : "";
+      if (dir === groupKey) dir = "";
+      return dir === dirKey;
+    });
+  }
+
+  private isDirAllSelected(dirKey: string, groupKey: string): boolean {
+    const dirFiles = this.getDirFiles(dirKey, groupKey);
+    return dirFiles.length > 0 && dirFiles.every((f: any) => this.selectedPaths.has(f.path));
+  }
+
+  private toggleDirSelect(dirKey: string, groupKey: string) {
+    const dirFiles = this.getDirFiles(dirKey, groupKey);
+    const next = new Set(this.selectedPaths);
+    if (this.isDirAllSelected(dirKey, groupKey)) {
+      for (const f of dirFiles) next.delete(f.path);
+    } else {
+      for (const f of dirFiles) next.add(f.path);
+    }
+    this.selectedPaths = next;
+  }
+
+  private confirmBatchDelete = () => {
+    if (!this.selectedPaths.size) return;
+    this.showBatchDeleteConfirm = true;
+  };
+
+  private cancelBatchDelete = () => {
+    this.showBatchDeleteConfirm = false;
+  };
+
+  private doBatchDelete = async () => {
+    if (!this.selectedPaths.size) return;
+    this.showBatchDeleteConfirm = false;
+    try {
+      await api.batchDeleteMemoryFiles([...this.selectedPaths]);
+      if (this.selectedPaths.has(this.selectedPath)) {
+        this.selectedPath = "";
+        this.content = "";
+        this.editing = false;
+        window.dispatchEvent(new CustomEvent("dashboard-file-select", { detail: { path: null } }));
+      }
+      this.exitSelectMode();
+      await this.load();
+    } catch (e: any) {
+      this.error = e.message;
+    }
+  };
+
   protected handleTab(e: KeyboardEvent) {
     if (e.key === "Tab") {
       e.preventDefault();
@@ -556,16 +665,34 @@ export abstract class FileViewer extends LitElement {
       ${this.error ? html`<div class="error">${this.error}</div>` : ""}
       <div class="layout">
         <div class="tree-panel ${this.mobileShowDetail ? "hidden" : ""}">
-          ${this.showSortControls ? html`
+          ${this.selecting ? html`
             <div class="sort-bar">
-              <button class="sort-btn ${this.sortMode === "name" ? "active" : ""}"
-                @click=${() => this._setSortMode("name")}>${t("common.name")}</button>
-              <button class="sort-btn ${this.sortMode === "time-desc" ? "active" : ""}"
-                @click=${() => this._setSortMode("time-desc")}>${t("common.newest")}</button>
-              <button class="sort-btn ${this.sortMode === "time-asc" ? "active" : ""}"
-                @click=${() => this._setSortMode("time-asc")}>${t("common.oldest")}</button>
+              <button class="sel-btn ${this.selectedPaths.size === this.files.length ? "active" : ""}"
+                @click=${this.selectAllFiles}>${t("fileViewer.selectAll")}</button>
+              <div class="spacer"></div>
+              ${this.selectedPaths.size ? html`
+                <button class="sel-btn danger" @click=${this.confirmBatchDelete}>
+                  ${t("fileViewer.batchDelete").replace("{0}", String(this.selectedPaths.size))}
+                </button>
+              ` : ""}
+              <button class="sel-btn" @click=${this.exitSelectMode}>${t("fileViewer.cancelSelect")}</button>
             </div>
-          ` : ""}
+          ` : html`
+            <div class="sort-bar">
+              ${this.showSortControls ? html`
+                <button class="sort-btn ${this.sortMode === "name" ? "active" : ""}"
+                  @click=${() => this._setSortMode("name")}>${t("common.name")}</button>
+                <button class="sort-btn ${this.sortMode === "time-desc" ? "active" : ""}"
+                  @click=${() => this._setSortMode("time-desc")}>${t("common.newest")}</button>
+                <button class="sort-btn ${this.sortMode === "time-asc" ? "active" : ""}"
+                  @click=${() => this._setSortMode("time-asc")}>${t("common.oldest")}</button>
+              ` : html`
+                <span style="font-size:12px;color:var(--text-muted);font-weight:600">${this.files.length}${t("fileViewer.fileCount")}</span>
+              `}
+              <div class="spacer"></div>
+              <button class="sel-btn" @click=${this.enterSelectMode}>${t("fileViewer.select")}</button>
+            </div>
+          `}
           <div class="tree-list">
             ${this.groups.map((g) => {
               const items = this.sortFiles(sections[g]);
@@ -579,22 +706,34 @@ export abstract class FileViewer extends LitElement {
                   const dirKey = `${g}/${sub.dir}`;
                   const isCollapsed = this.collapsedDirs.has(dirKey);
                   const fileItems = sub.files.map(
-                    (f: any) => html`
-                      <div
-                        class="tree-item ${this.selectedPath === f.path ? "active" : ""}"
-                        @click=${() => this.selectFile(f.path)}
-                      >
-                        <span class="path">${f.name}</span>
-                        <span class="size">${this.formatSize(f.sizeBytes)}</span>
-                      </div>
-                    `
+                    (f: any) => {
+                      const checked = this.selectedPaths.has(f.path);
+                      return html`
+                        <div
+                          class="tree-item ${!this.selecting && this.selectedPath === f.path ? "active" : ""}"
+                          @click=${() => this.selecting ? this.toggleSelect(f.path) : this.selectFile(f.path)}
+                        >
+                          ${this.selecting ? html`<div class="checkbox ${checked ? "checked" : ""}">✓</div>` : ""}
+                          <span class="path">${f.name}</span>
+                          <span class="size">${this.formatSize(f.sizeBytes)}</span>
+                        </div>
+                      `;
+                    }
                   );
                   return html`
                     ${sub.dir
                       ? html`
-                          <div class="tree-dir" @click=${() => this.toggleDir(dirKey)}>
-                            <span class="dir-icon">📁</span>
-                            ${sub.dir}/
+                          <div class="tree-dir">
+                            ${this.selecting ? html`
+                              <div class="checkbox ${this.isDirAllSelected(sub.dir, g) ? "checked" : ""}"
+                                @click=${(e: Event) => { e.stopPropagation(); this.toggleDirSelect(sub.dir, g); }}>✓</div>
+                            ` : ""}
+                            <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0"
+                              @click=${() => this.toggleDir(dirKey)}>
+                              <span class="chevron ${isCollapsed ? "collapsed" : ""}">▶</span>
+                              <span class="dir-icon">📁</span>
+                              ${sub.dir}/
+                            </div>
                           </div>
                           ${!isCollapsed ? html`<div class="dir-children">${fileItems}</div>` : ""}
                         `
@@ -649,6 +788,18 @@ export abstract class FileViewer extends LitElement {
             <div class="dialog-actions">
               <button class="btn-cancel" @click=${this.cancelDelete}>${t("common.cancel")}</button>
               <button class="btn-confirm-delete" @click=${this.doDeleteFile}>${t("common.delete")}</button>
+            </div>
+          </div>
+        </div>
+      ` : ""}
+      ${this.showBatchDeleteConfirm ? html`
+        <div class="dialog-overlay">
+          <div class="dialog">
+            <h3>${t("fileViewer.deleteTitle")}</h3>
+            <p>${t("fileViewer.batchDeleteConfirm").replace("{0}", String(this.selectedPaths.size))}</p>
+            <div class="dialog-actions">
+              <button class="btn-cancel" @click=${this.cancelBatchDelete}>${t("common.cancel")}</button>
+              <button class="btn-confirm-delete" @click=${this.doBatchDelete}>${t("common.delete")}</button>
             </div>
           </div>
         </div>

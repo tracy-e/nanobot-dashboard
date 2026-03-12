@@ -62,13 +62,19 @@ export const api = {
     }),
   deleteMemoryFile: (path: string) =>
     request(`/api/memory/files/${encodeURIComponent(path)}`, { method: "DELETE" }),
+  batchDeleteMemoryFiles: (paths: string[]) =>
+    request("/api/memory/batch-delete", {
+      method: "POST",
+      body: JSON.stringify({ paths }),
+    }),
+  memoryRawUrl: (path: string) => `/api/memory/raw/${encodeURIComponent(path)}`,
 
   // Skills
   getSkills: () => request("/api/skills"),
   getSkillFile: (id: string, filename: string) =>
-    request(`/api/skills/${encodeURIComponent(id)}/${encodeURIComponent(filename)}`),
+    request(`/api/skills/${encodeURIComponent(id)}/${filename.split("/").map(encodeURIComponent).join("/")}`),
   updateSkillFile: (id: string, filename: string, content: string) =>
-    request(`/api/skills/${encodeURIComponent(id)}/${encodeURIComponent(filename)}`, {
+    request(`/api/skills/${encodeURIComponent(id)}/${filename.split("/").map(encodeURIComponent).join("/")}`, {
       method: "PUT",
       body: JSON.stringify({ content }),
     }),

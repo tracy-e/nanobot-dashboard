@@ -52,6 +52,9 @@ export class SkillsPage extends LitElement {
       border-radius: var(--r-lg); box-shadow: var(--shadow-card);
       display: flex; flex-direction: column;
     }
+    .list-content {
+      flex: 1; overflow-y: auto;
+    }
     .skill-item {
       padding: 14px 16px; border-bottom: 1px solid var(--border-subtle);
       cursor: pointer; transition: all 0.12s var(--ease);
@@ -61,11 +64,23 @@ export class SkillsPage extends LitElement {
       background: var(--bg-elevated);
       border-left: 3px solid var(--green);
     }
-    .skill-name { font-size: 14px; color: var(--text-primary); font-weight: 600; }
+    .skill-name { font-size: 14px; color: var(--text-primary); font-weight: 600; display: flex; align-items: center; gap: 6px; }
+    .builtin-badge {
+      font-size: 10px; padding: 2px 6px; border-radius: 4px;
+      background: var(--bg-surface); color: var(--text-muted);
+      border: 1px solid var(--border-default); font-weight: 500;
+    }
     .skill-desc {
       font-size: 12px; color: var(--text-muted); margin-top: 4px;
       overflow: hidden; text-overflow: ellipsis;
       display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    }
+    .section-header {
+      padding: 10px 16px; font-size: 11px; font-weight: 600;
+      color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: 0.5px; background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-subtle);
+      position: sticky; top: 0; z-index: 1;
     }
 
     /* ---- Detail Panel ---- */
@@ -247,6 +262,7 @@ export class SkillsPage extends LitElement {
       color: var(--text-muted); font-size: 12px; font-weight: 600;
       padding: 10px 16px; border-bottom: 1px solid var(--border-subtle);
       background: var(--bg-surface); flex-shrink: 0;
+      position: sticky; top: 0; z-index: 2;
     }
   `;
 
@@ -387,6 +403,46 @@ export class SkillsPage extends LitElement {
     return html`<pre style="white-space:pre-wrap;word-break:break-word;margin:0;font-family:var(--font-mono);font-size:13px;line-height:1.6">${this.fileContent}</pre>`;
   }
 
+  private renderSkillList() {
+    const builtinSkills = this.skills.filter(s => s.builtin);
+    const workspaceSkills = this.skills.filter(s => !s.builtin);
+
+    return html`
+      ${builtinSkills.length > 0 ? html`
+        <div class="section-header">${t("skills.builtInSection")}</div>
+        ${builtinSkills.map(
+          (s) => html`
+            <div
+              class="skill-item ${this.selected?.id === s.id ? "active" : ""}"
+              @click=${() => this.selectSkill(s)}
+            >
+              <div class="skill-name">${s.name}</div>
+              ${s.description
+                ? html`<div class="skill-desc">${s.description}</div>`
+                : ""}
+            </div>
+          `
+        )}
+      ` : ""}
+      ${workspaceSkills.length > 0 ? html`
+        <div class="section-header">${t("skills.workspaceSection")}</div>
+        ${workspaceSkills.map(
+          (s) => html`
+            <div
+              class="skill-item ${this.selected?.id === s.id ? "active" : ""}"
+              @click=${() => this.selectSkill(s)}
+            >
+              <div class="skill-name">${s.name}</div>
+              ${s.description
+                ? html`<div class="skill-desc">${s.description}</div>`
+                : ""}
+            </div>
+          `
+        )}
+      ` : ""}
+    `;
+  }
+
   render() {
     return html`
       <div class="page-header">
@@ -397,19 +453,9 @@ export class SkillsPage extends LitElement {
       <div class="layout">
         <div class="list-panel ${this.mobileShowDetail ? "hidden" : ""}">
           <div class="stat">${this.skills.length}${t("skills.count")}</div>
-          ${this.skills.map(
-            (s) => html`
-              <div
-                class="skill-item ${this.selected?.id === s.id ? "active" : ""}"
-                @click=${() => this.selectSkill(s)}
-              >
-                <div class="skill-name">${s.name}</div>
-                ${s.description
-                  ? html`<div class="skill-desc">${s.description}</div>`
-                  : ""}
-              </div>
-            `
-          )}
+          <div class="list-content">
+            ${this.renderSkillList()}
+          </div>
         </div>
         <div class="detail-panel ${!this.mobileShowDetail ? "hidden" : ""}">
           ${!this.selected
@@ -422,17 +468,21 @@ export class SkillsPage extends LitElement {
                       <h2>${this.selected.name}</h2>
                     </div>
                     <div class="detail-actions">
-                      ${this.editing
+                      ${!this.selected.builtin
                         ? html`
-                            <button class="btn btn-cancel" @click=${this.cancelEdit}>${t("common.cancel")}</button>
-                            <button class="btn btn-save" @click=${this.saveEdit} ?disabled=${this.saving}>
-                              ${this.saving ? t("common.saving") : t("common.save")}
-                            </button>
+                            ${this.editing
+                              ? html`
+                                  <button class="btn btn-cancel" @click=${this.cancelEdit}>${t("common.cancel")}</button>
+                                  <button class="btn btn-save" @click=${this.saveEdit} ?disabled=${this.saving}>
+                                    ${this.saving ? t("common.saving") : t("common.save")}
+                                  </button>
+                                `
+                              : html`
+                                  <button class="btn btn-edit" @click=${this.startEdit}>${t("common.edit")}</button>
+                                  <button class="btn btn-danger" @click=${this.confirmDeleteSkill}>${t("common.delete")}</button>
+                                `}
                           `
-                        : html`
-                            <button class="btn btn-edit" @click=${this.startEdit}>${t("common.edit")}</button>
-                            <button class="btn btn-danger" @click=${this.confirmDeleteSkill}>${t("common.delete")}</button>
-                          `}
+                        : ""}
                     </div>
                   </div>
                   <div class="file-tabs">

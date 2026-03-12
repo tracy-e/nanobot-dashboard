@@ -6,6 +6,8 @@ Uses os.walk(followlinks=True) to correctly traverse symlinked dirs.
 """
 
 import os
+import shutil
+import subprocess
 from pathlib import Path
 
 from aiohttp import web
@@ -13,11 +15,25 @@ from aiohttp import web
 from dashboard.config import WORKSPACE_DIR
 from dashboard.utils.sanitize import safe_resolve
 
-# Only allow these extensions
-ALLOWED_EXTENSIONS = {".md", ".json", ".jsonl", ".txt"}
+# Text-editable extensions (for get/update content as text)
+TEXT_EXTENSIONS = {".md", ".json", ".jsonl", ".txt", ".py", ".html", ".css", ".js", ".ts",
+                   ".yaml", ".yml", ".sh", ".toml", ".cfg", ".ini", ".xml", ".csv"}
+
+# Extensions to hide from listing
+HIDDEN_EXTENSIONS = {".DS_Store"}
 
 # Directories to skip entirely
 SKIP_DIRS = {"sessions", "skills", "__pycache__", ".DS_Store"}
+
+_HAS_TRASH = shutil.which("trash") is not None
+
+
+def _trash_or_unlink(filepath: Path) -> None:
+    """Move file to trash if available, otherwise unlink."""
+    if _HAS_TRASH:
+        subprocess.run(["trash", str(filepath)], check=True)
+    else:
+        filepath.unlink()
 
 
 def _walk_dir(base: Path, group: str) -> list[dict]:
@@ -32,7 +48,7 @@ def _walk_dir(base: Path, group: str) -> list[dict]:
 
         for fname in sorted(filenames):
             fp = Path(dirpath) / fname
-            if fp.suffix in ALLOWED_EXTENSIONS and not fname.startswith("."):
+            if not fname.startswith(".") and fp.suffix not in HIDDEN_EXTENSIONS:
                 st = fp.stat()
                 # Path relative to WORKSPACE_DIR (logical, not resolved)
                 rel = os.path.relpath(str(fp), str(WORKSPACE_DIR))
@@ -79,7 +95,7 @@ def _scan_files():
                 dirnames[:] = [d for d in dirnames if d != "knowledge" and not d.startswith(".") and d not in SKIP_DIRS]
                 for fname in sorted(filenames):
                     fp = Path(dirpath) / fname
-                    if fp.suffix in ALLOWED_EXTENSIONS and not fname.startswith("."):
+                    if not fname.startswith(".") and fp.suffix not in HIDDEN_EXTENSIONS:
                         st = fp.stat()
                         rel = os.path.relpath(str(fp), str(WORKSPACE_DIR))
                         files.append({
@@ -113,8 +129,8 @@ async def get_file(request: web.Request) -> web.Response:
     if not filepath.exists() or not filepath.is_file():
         raise web.HTTPNotFound(text="File not found")
 
-    if filepath.suffix not in ALLOWED_EXTENSIONS:
-        raise web.HTTPBadRequest(text=f"File type {filepath.suffix} not allowed")
+    if filepath.suffix not in TEXT_EXTENSIONS:
+        raise web.HTTPBadRequest(text=f"File type {filepath.suffix} is not text-editable")
 
     content = filepath.read_text(encoding="utf-8")
     return web.json_response({
@@ -124,6 +140,20 @@ async def get_file(request: web.Request) -> web.Response:
     })
 
 
+async def get_raw_file(request: web.Request) -> web.Response:
+    """Serve a workspace file with its native content-type (for images etc.)."""
+    path = request.match_info["path"]
+    try:
+        filepath = safe_resolve(WORKSPACE_DIR, path)
+    except ValueError:
+        raise web.HTTPForbidden(text="Path traversal detected")
+
+    if not filepath.exists() or not filepath.is_file():
+        raise web.HTTPNotFound(text="File not found")
+
+    return web.FileResponse(filepath)
+
+
 async def update_file(request: web.Request) -> web.Response:
     path = request.match_info["path"]
     try:
@@ -131,8 +161,8 @@ async def update_file(request: web.Request) -> web.Response:
     except ValueError:
         raise web.HTTPForbidden(text="Path traversal detected")
 
-    if filepath.suffix not in ALLOWED_EXTENSIONS:
-        raise web.HTTPBadRequest(text=f"File type {filepath.suffix} not allowed")
+    if filepath.suffix not in TEXT_EXTENSIONS:
+        raise web.HTTPBadRequest(text=f"File type {filepath.suffix} is not text-editable")
 
     body = await request.json()
     content = body.get("content")
@@ -159,16 +189,40 @@ async def delete_file(request: web.Request) -> web.Response:
     if not filepath.exists() or not filepath.is_file():
         raise web.HTTPNotFound(text="File not found")
 
-    if filepath.suffix not in ALLOWED_EXTENSIONS:
-        raise web.HTTPBadRequest(text=f"File type {filepath.suffix} not allowed")
-
-    filepath.unlink()
+    _trash_or_unlink(filepath)
 
     return web.json_response({"path": path, "deleted": True})
 
 
+async def batch_delete(request: web.Request) -> web.Response:
+    body = await request.json()
+    paths = body.get("paths", [])
+    if not paths or not isinstance(paths, list):
+        raise web.HTTPBadRequest(text="paths[] is required")
+
+    deleted = []
+    errors = []
+    for path in paths:
+        try:
+            filepath = safe_resolve(WORKSPACE_DIR, path)
+        except ValueError:
+            errors.append({"path": path, "error": "Path traversal detected"})
+            continue
+
+        if not filepath.exists() or not filepath.is_file():
+            errors.append({"path": path, "error": "File not found"})
+            continue
+
+        _trash_or_unlink(filepath)
+        deleted.append(path)
+
+    return web.json_response({"deleted": deleted, "errors": errors})
+
+
 def setup(app: web.Application):
     app.router.add_get("/api/memory/files", list_files)
+    app.router.add_get(r"/api/memory/raw/{path:.+}", get_raw_file)
     app.router.add_get(r"/api/memory/files/{path:.+}", get_file)
     app.router.add_put(r"/api/memory/files/{path:.+}", update_file)
     app.router.add_delete(r"/api/memory/files/{path:.+}", delete_file)
+    app.router.add_post("/api/memory/batch-delete", batch_delete)

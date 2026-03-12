@@ -1,6 +1,6 @@
 """Skills management endpoints.
 
-Scans workspace/skills/ for skill directories, parses SKILL.md frontmatter.
+Scans workspace/skills/ and nanobot built-in skills for skill directories, parses SKILL.md frontmatter.
 """
 
 import os
@@ -9,10 +9,11 @@ from pathlib import Path
 
 from aiohttp import web
 
-from dashboard.config import WORKSPACE_DIR
+from dashboard.config import NANOBOT_ROOT, WORKSPACE_DIR
 from dashboard.utils.sanitize import safe_resolve
 
-SKILLS_DIR = WORKSPACE_DIR / "skills"
+WORKSPACE_SKILLS_DIR = WORKSPACE_DIR / "skills"
+NANOBOT_SKILLS_DIR = NANOBOT_ROOT / "nanobot-src" / "nanobot" / "skills"
 
 
 def _parse_frontmatter(text: str) -> dict:
@@ -32,13 +33,13 @@ def _parse_frontmatter(text: str) -> dict:
     return fm
 
 
-def _scan_skills() -> list[dict]:
-    """Scan skills directory for all skill definitions."""
+def _scan_skills_dir(skills_dir: Path, builtin: bool = False) -> list[dict]:
+    """Scan a skills directory for skill definitions."""
     skills = []
-    if not SKILLS_DIR.exists():
+    if not skills_dir.exists():
         return skills
 
-    for entry in sorted(SKILLS_DIR.iterdir()):
+    for entry in sorted(skills_dir.iterdir()):
         if not entry.is_dir() or entry.name.startswith("."):
             continue
 
@@ -49,6 +50,7 @@ def _scan_skills() -> list[dict]:
             "description": "",
             "hasSkillMd": skill_md.exists(),
             "files": [],
+            "builtin": builtin,
         }
 
         if skill_md.exists():
@@ -75,6 +77,21 @@ def _scan_skills() -> list[dict]:
     return skills
 
 
+def _scan_skills() -> list[dict]:
+    """Scan both workspace and built-in skills directories."""
+    skills = []
+    
+    # Scan built-in skills first
+    builtin_skills = _scan_skills_dir(NANOBOT_SKILLS_DIR, builtin=True)
+    skills.extend(builtin_skills)
+    
+    # Then scan workspace skills
+    workspace_skills = _scan_skills_dir(WORKSPACE_SKILLS_DIR, builtin=False)
+    skills.extend(workspace_skills)
+    
+    return skills
+
+
 async def list_skills(request: web.Request) -> web.Response:
     skills = _scan_skills()
     return web.json_response({"skills": skills})
@@ -85,8 +102,14 @@ async def get_skill_file(request: web.Request) -> web.Response:
     skill_id = request.match_info["id"]
     filename = request.match_info["filename"]
 
+    # Determine which skills directory to use
+    # Check workspace first, then built-in
+    skills_dir = WORKSPACE_SKILLS_DIR
+    if not (skills_dir / skill_id).exists():
+        skills_dir = NANOBOT_SKILLS_DIR
+
     try:
-        filepath = safe_resolve(SKILLS_DIR, f"{skill_id}/{filename}")
+        filepath = safe_resolve(skills_dir, f"{skill_id}/{filename}")
     except ValueError:
         raise web.HTTPForbidden(text="Path traversal detected")
 
@@ -103,14 +126,18 @@ async def get_skill_file(request: web.Request) -> web.Response:
 
 
 async def update_skill_file(request: web.Request) -> web.Response:
-    """Update a file in a skill directory."""
+    """Update a file in a skill directory (workspace only)."""
     skill_id = request.match_info["id"]
     filename = request.match_info["filename"]
 
+    # Only allow updates to workspace skills
     try:
-        filepath = safe_resolve(SKILLS_DIR, f"{skill_id}/{filename}")
+        filepath = safe_resolve(WORKSPACE_SKILLS_DIR, f"{skill_id}/{filename}")
     except ValueError:
         raise web.HTTPForbidden(text="Path traversal detected")
+
+    if not filepath.exists() and not (WORKSPACE_SKILLS_DIR / skill_id).exists():
+        raise web.HTTPNotFound(text="Skill not found or is built-in (read-only)")
 
     body = await request.json()
     content = body.get("content")
@@ -129,17 +156,17 @@ async def update_skill_file(request: web.Request) -> web.Response:
 
 
 async def delete_skill(request: web.Request) -> web.Response:
-    """Delete a skill directory."""
+    """Delete a skill directory (workspace only)."""
     import shutil
     skill_id = request.match_info["id"]
 
     try:
-        dirpath = safe_resolve(SKILLS_DIR, skill_id)
+        dirpath = safe_resolve(WORKSPACE_SKILLS_DIR, skill_id)
     except ValueError:
         raise web.HTTPForbidden(text="Path traversal detected")
 
     if not dirpath.exists() or not dirpath.is_dir():
-        raise web.HTTPNotFound(text="Skill not found")
+        raise web.HTTPNotFound(text="Skill not found or is built-in (cannot delete)")
 
     shutil.rmtree(str(dirpath))
     return web.json_response({"deleted": skill_id})

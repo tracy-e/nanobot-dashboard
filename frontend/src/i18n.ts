@@ -143,6 +143,12 @@ const zh: Record<string, string> = {
   "fileViewer.selectFile": "选择文件以查看",
   "fileViewer.deleteTitle": "删除文件",
   "fileViewer.deleteConfirm": "确定删除",
+  "fileViewer.fileCount": "个文件",
+  "fileViewer.select": "选择",
+  "fileViewer.cancelSelect": "取消",
+  "fileViewer.selectAll": "全选",
+  "fileViewer.batchDelete": "删除({0})",
+  "fileViewer.batchDeleteConfirm": "确定删除选中的 {0} 个文件？",
 
   // skills
   "skills.title": "技能",
@@ -152,6 +158,9 @@ const zh: Record<string, string> = {
   "skills.deleteTitle": "删除技能",
   "skills.deleteConfirm": "确定删除技能",
   "skills.deleteNote": "将移除整个目录。",
+  "skills.builtIn": "内置",
+  "skills.builtInSection": "内置技能",
+  "skills.workspaceSection": "工作区技能",
 
   // media
   "media.title": "媒体",
@@ -326,6 +335,12 @@ const en: Record<string, string> = {
   "fileViewer.selectFile": "Select a file to view",
   "fileViewer.deleteTitle": "Delete File",
   "fileViewer.deleteConfirm": "Delete",
+  "fileViewer.fileCount": " files",
+  "fileViewer.select": "Select",
+  "fileViewer.cancelSelect": "Cancel",
+  "fileViewer.selectAll": "All",
+  "fileViewer.batchDelete": "Delete({0})",
+  "fileViewer.batchDeleteConfirm": "Delete {0} selected files?",
 
   // skills
   "skills.title": "Skills",
@@ -335,6 +350,9 @@ const en: Record<string, string> = {
   "skills.deleteTitle": "Delete Skill",
   "skills.deleteConfirm": "Delete skill",
   "skills.deleteNote": " The entire directory will be removed.",
+  "skills.builtIn": "Built-in",
+  "skills.builtInSection": "Built-in Skills",
+  "skills.workspaceSection": "Workspace Skills",
 
   // media
   "media.title": "Media",

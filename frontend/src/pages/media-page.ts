@@ -153,14 +153,14 @@ export class MediaPage extends LitElement {
     }
     .select-bar .sel-btn.danger:hover { background: var(--red-soft); }
     .select-bar .spacer { flex: 1; }
-    .file-item .checkbox {
+    .checkbox {
       width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0;
       border: 1.5px solid var(--border-default); background: transparent;
       display: flex; align-items: center; justify-content: center;
       cursor: pointer; transition: all 0.12s var(--ease);
       font-size: 11px; color: transparent;
     }
-    .file-item .checkbox.checked {
+    .checkbox.checked {
       background: var(--green); border-color: var(--green); color: #fff;
     }
 
@@ -272,6 +272,29 @@ export class MediaPage extends LitElement {
     if (next.has(dir)) next.delete(dir);
     else next.add(dir);
     this.collapsedDirs = next;
+  }
+
+  private getDirFiles(dir: string): any[] {
+    return this.files.filter((f: any) => {
+      const idx = f.path.lastIndexOf("/");
+      return (idx === -1 ? "" : f.path.substring(0, idx)) === dir;
+    });
+  }
+
+  private isDirAllSelected(dir: string): boolean {
+    const dirFiles = this.getDirFiles(dir);
+    return dirFiles.length > 0 && dirFiles.every((f: any) => this.selectedPaths.has(f.path));
+  }
+
+  private toggleDirSelect(dir: string) {
+    const dirFiles = this.getDirFiles(dir);
+    const next = new Set(this.selectedPaths);
+    if (this.isDirAllSelected(dir)) {
+      for (const f of dirFiles) next.delete(f.path);
+    } else {
+      for (const f of dirFiles) next.add(f.path);
+    }
+    this.selectedPaths = next;
   }
 
   private goBackToList() {
@@ -435,11 +458,19 @@ export class MediaPage extends LitElement {
     for (const [dir, files] of groups) {
       if (dir === "") continue;
       const collapsed = this.collapsedDirs.has(dir);
+      const dirAllSelected = this.selecting && this.isDirAllSelected(dir);
       result.push(html`
-        <div class="dir-header" @click=${() => this.toggleDir(dir)}>
-          <span class="dir-arrow ${collapsed ? "collapsed" : ""}">▼</span>
-          <span>📁 ${dir}/</span>
-          <span style="color:var(--text-muted);font-weight:400">${files.length}</span>
+        <div class="dir-header">
+          ${this.selecting ? html`
+            <div class="checkbox ${dirAllSelected ? "checked" : ""}"
+              @click=${(e: Event) => { e.stopPropagation(); this.toggleDirSelect(dir); }}>✓</div>
+          ` : ""}
+          <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0"
+            @click=${() => this.toggleDir(dir)}>
+            <span class="dir-arrow ${collapsed ? "collapsed" : ""}">▼</span>
+            <span>📁 ${dir}/</span>
+            <span style="color:var(--text-muted);font-weight:400">${files.length}</span>
+          </div>
         </div>
       `);
       if (!collapsed) {
