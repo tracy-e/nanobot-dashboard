@@ -132,7 +132,7 @@ async def run_job(request: web.Request) -> web.Response:
 
     try:
         await asyncio.create_subprocess_exec(
-            "nanobot", "cron", "run", job_id,
+            "nanobot", "cron", "run", "--force", job_id,
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL,
         )

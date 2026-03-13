@@ -5,6 +5,7 @@ import { t } from "../i18n.js";
 
 @customElement("memory-page")
 export class MemoryPage extends FileViewer {
+  readonly pageId = "workspace";
   get pageTitle() { return t("memory.title"); }
   groups: string[] = [];
   groupLabels: Record<string, string> = {};

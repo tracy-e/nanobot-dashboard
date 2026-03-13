@@ -14,6 +14,7 @@ export abstract class FileViewer extends LitElement {
   abstract readonly pageTitle: string;
   abstract groups: string[];
   abstract groupLabels: Record<string, string>;
+  abstract readonly pageId: string;
 
   @state() protected files: any[] = [];
   @state() protected selectedPath = "";
@@ -350,13 +351,21 @@ export abstract class FileViewer extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this._loadSortMode();
-    this.load();
+    this.load().then(() => {
+      const filePath = this._getFilePathFromHash();
+      if (filePath) {
+        this._expandDirsForFile(filePath);
+        this.selectFile(filePath, false);
+      }
+    });
     window.addEventListener("dashboard-file-navigate", this._onFileNavigate as EventListener);
+    window.addEventListener("hashchange", this._onHashChangeFileViewer);
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
     window.removeEventListener("dashboard-file-navigate", this._onFileNavigate as EventListener);
+    window.removeEventListener("hashchange", this._onHashChangeFileViewer);
     window.dispatchEvent(new CustomEvent("dashboard-file-select", { detail: { path: null } }));
   }
 
@@ -373,6 +382,60 @@ export abstract class FileViewer extends LitElement {
         if (found) this.selectFile(path);
       });
     }
+  };
+
+  private _getFilePathFromHash(): string {
+    const hash = location.hash.slice(1);
+    const slash = hash.indexOf("/");
+    if (slash < 0) return "";
+    const page = hash.substring(0, slash);
+    if (page !== this.pageId) return "";
+    return hash.substring(slash + 1);
+  }
+
+  private _expandDirsForFile(path: string) {
+    const file = this.files.find((f: any) => f.path === path);
+    if (!file) return;
+    const parts = path.split("/");
+    let dir = parts.length > 2 ? parts.slice(1, -1).join("/") : "";
+    if (dir === file.group) dir = "";
+    if (!dir) return;
+    const dirKey = `${file.group}/${dir}`;
+    if (this.collapsedDirs.has(dirKey)) {
+      const next = new Set(this.collapsedDirs);
+      next.delete(dirKey);
+      this.collapsedDirs = next;
+    }
+  }
+
+  private _onHashChangeFileViewer = () => {
+    const filePath = this._getFilePathFromHash();
+    if (filePath && filePath !== this.selectedPath) {
+      this._expandDirsForFile(filePath);
+      this.selectFile(filePath, false);
+    } else if (!filePath && this.selectedPath) {
+      this.selectedPath = "";
+      this.content = "";
+      this.editing = false;
+      window.dispatchEvent(new CustomEvent("dashboard-file-select", { detail: { path: null } }));
+    }
+  };
+
+  private _onContentClick = (e: MouseEvent) => {
+    const anchor = (e.target as HTMLElement).closest?.("a") as HTMLAnchorElement | null;
+    if (!anchor) return;
+    const href = anchor.getAttribute("href");
+    if (!href) return;
+    if (/^(https?|mailto|tel):/.test(href)) return;
+    e.preventDefault();
+    // Handle hash links like #workspace/path or #knowledge/path
+    if (href.startsWith("#")) {
+      location.hash = href.slice(1);
+      return;
+    }
+    const filePath = href.startsWith("/") ? href.slice(1) : href;
+    const page = filePath.startsWith("memory/knowledge/") ? "knowledge" : "workspace";
+    location.hash = `${page}/${filePath}`;
   };
 
   async refresh() {
@@ -425,7 +488,7 @@ export abstract class FileViewer extends LitElement {
     return FileViewer.IMAGE_EXTS.has(this.getExt(path).toLowerCase());
   }
 
-  async selectFile(path: string) {
+  async selectFile(path: string, updateHash = true) {
     this.selectedPath = path;
     this.editing = false;
     this.mobileShowDetail = true;
@@ -437,6 +500,9 @@ export abstract class FileViewer extends LitElement {
       } catch (e: any) {
         this.error = e.message;
       }
+    }
+    if (updateHash) {
+      history.replaceState(null, "", `#${this.pageId}/${path}`);
     }
     window.dispatchEvent(new CustomEvent("dashboard-file-select", { detail: { path } }));
   }
@@ -465,6 +531,7 @@ export abstract class FileViewer extends LitElement {
       this.selectedPath = "";
       this.content = "";
       this.editing = false;
+      history.replaceState(null, "", `#${this.pageId}`);
       await this.load();
       window.dispatchEvent(new CustomEvent("dashboard-file-select", { detail: { path: null } }));
     } catch (e: any) {
@@ -553,6 +620,7 @@ export abstract class FileViewer extends LitElement {
         this.selectedPath = "";
         this.content = "";
         this.editing = false;
+        history.replaceState(null, "", `#${this.pageId}`);
         window.dispatchEvent(new CustomEvent("dashboard-file-select", { detail: { path: null } }));
       }
       this.exitSelectMode();
@@ -767,7 +835,7 @@ export abstract class FileViewer extends LitElement {
                         `}
                   </div>
                 </div>
-                <div class="content-body">
+                <div class="content-body" @click=${this._onContentClick}>
                   ${this.editing
                     ? html`<textarea
                         class="editor-area"

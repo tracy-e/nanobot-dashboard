@@ -220,17 +220,8 @@ export class SearchModal extends LitElement {
 
   private navigateTo(result: SearchResult) {
     this.close();
-    // Navigate to the correct page based on group
     const page = result.group === "knowledge" ? "knowledge" : "workspace";
-    location.hash = page;
-    // Wait for page to render, then dispatch file navigate event
-    setTimeout(() => {
-      window.dispatchEvent(
-        new CustomEvent("dashboard-file-navigate", {
-          detail: { path: result.path },
-        })
-      );
-    }, 100);
+    location.hash = `${page}/${result.path}`;
   }
 
   private onOverlayClick(e: MouseEvent) {

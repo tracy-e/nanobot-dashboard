@@ -245,8 +245,9 @@ export class ChatWidget extends LitElement {
 
   private _onHashChange = () => {
     const hash = location.hash.replace("#", "");
+    const page = hash.split("/")[0] || "";
     const noFilePages = ["status", "sessions", "cron", "media", ""];
-    if (noFilePages.includes(hash)) {
+    if (noFilePages.includes(page)) {
       this.contextFile = "";
     }
   };
@@ -339,7 +340,7 @@ export class ChatWidget extends LitElement {
           session_id: this.sessionId || undefined,
           ...(this.contextFile ? {
             context: {
-              page: location.hash.replace("#", "") || "status",
+              page: location.hash.replace("#", "").split("/")[0] || "status",
               file: this.contextFile,
             },
           } : {}),

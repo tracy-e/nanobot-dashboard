@@ -57,12 +57,18 @@ export class NanoApp extends LitElement {
     }
   `;
 
+  private _parsePage(): string {
+    const hash = location.hash.slice(1);
+    if (!hash) return "status";
+    const slash = hash.indexOf("/");
+    return slash >= 0 ? hash.substring(0, slash) : hash;
+  }
+
   connectedCallback() {
     super.connectedCallback();
-    const hash = location.hash.slice(1);
-    if (hash) this.page = hash;
+    this.page = this._parsePage();
     window.addEventListener("hashchange", () => {
-      this.page = location.hash.slice(1) || "status";
+      this.page = this._parsePage();
     });
     this.checkOptionalTabs();
   }
