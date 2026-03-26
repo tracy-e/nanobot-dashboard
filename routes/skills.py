@@ -11,6 +11,7 @@ from aiohttp import web
 
 from dashboard.config import NANOBOT_ROOT, WORKSPACE_DIR
 from dashboard.utils.sanitize import safe_resolve
+from dashboard.utils.trash import safe_delete
 
 WORKSPACE_SKILLS_DIR = WORKSPACE_DIR / "skills"
 NANOBOT_SKILLS_DIR = NANOBOT_ROOT / "nanobot-src" / "nanobot" / "skills"
@@ -157,7 +158,6 @@ async def update_skill_file(request: web.Request) -> web.Response:
 
 async def delete_skill(request: web.Request) -> web.Response:
     """Delete a skill directory (workspace only)."""
-    import shutil
     skill_id = request.match_info["id"]
 
     try:
@@ -168,7 +168,7 @@ async def delete_skill(request: web.Request) -> web.Response:
     if not dirpath.exists() or not dirpath.is_dir():
         raise web.HTTPNotFound(text="Skill not found or is built-in (cannot delete)")
 
-    shutil.rmtree(str(dirpath))
+    safe_delete(dirpath)
     return web.json_response({"deleted": skill_id})
 
 

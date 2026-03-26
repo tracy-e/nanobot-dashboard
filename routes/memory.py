@@ -6,14 +6,13 @@ Uses os.walk(followlinks=True) to correctly traverse symlinked dirs.
 """
 
 import os
-import shutil
-import subprocess
 from pathlib import Path
 
 from aiohttp import web
 
 from dashboard.config import WORKSPACE_DIR
 from dashboard.utils.sanitize import safe_resolve
+from dashboard.utils.trash import safe_delete
 
 # Text-editable extensions (for get/update content as text)
 TEXT_EXTENSIONS = {".md", ".json", ".jsonl", ".txt", ".py", ".html", ".css", ".js", ".ts",
@@ -24,16 +23,6 @@ HIDDEN_EXTENSIONS = {".DS_Store"}
 
 # Directories to skip entirely
 SKIP_DIRS = {"sessions", "skills", "__pycache__", ".DS_Store"}
-
-_HAS_TRASH = shutil.which("trash") is not None
-
-
-def _trash_or_unlink(filepath: Path) -> None:
-    """Move file to trash if available, otherwise unlink."""
-    if _HAS_TRASH:
-        subprocess.run(["trash", str(filepath)], check=True)
-    else:
-        filepath.unlink()
 
 
 def _walk_dir(base: Path, group: str) -> list[dict]:
@@ -189,7 +178,7 @@ async def delete_file(request: web.Request) -> web.Response:
     if not filepath.exists() or not filepath.is_file():
         raise web.HTTPNotFound(text="File not found")
 
-    _trash_or_unlink(filepath)
+    safe_delete(filepath)
 
     return web.json_response({"path": path, "deleted": True})
 
@@ -213,7 +202,7 @@ async def batch_delete(request: web.Request) -> web.Response:
             errors.append({"path": path, "error": "File not found"})
             continue
 
-        _trash_or_unlink(filepath)
+        safe_delete(filepath)
         deleted.append(path)
 
     return web.json_response({"deleted": deleted, "errors": errors})

@@ -1,7 +1,9 @@
 import { LitElement, html, css } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { api } from "../api/client.js";
 import { t } from "../i18n.js";
+import { renderMarkdown } from "../utils/markdown.js";
 
 @customElement("media-page")
 export class MediaPage extends LitElement {
@@ -36,7 +38,7 @@ export class MediaPage extends LitElement {
 
     /* ---- List Panel ---- */
     .list-panel {
-      width: 280px; flex-shrink: 0; overflow-y: auto;
+      width: 280px; flex-shrink: 0; overflow: hidden;
       background: var(--bg-card); border: 1px solid var(--border-subtle);
       border-radius: var(--r-lg); box-shadow: var(--shadow-card);
       display: flex; flex-direction: column;
@@ -61,6 +63,7 @@ export class MediaPage extends LitElement {
     .file-icon.audio { background: var(--blue-soft); color: var(--blue); }
     .file-icon.video { background: var(--orange-soft); color: var(--orange); }
     .file-icon.text { background: var(--green-soft); color: var(--green); }
+    .file-icon.pdf { background: var(--red-soft); color: var(--red); }
     .file-icon.other { background: var(--bg-elevated); color: var(--text-muted); }
     .file-icon img {
       width: 100%; height: 100%; object-fit: cover;
@@ -115,12 +118,54 @@ export class MediaPage extends LitElement {
     .preview-body video {
       max-width: 100%; max-height: 100%; border-radius: var(--r-sm);
     }
+    .preview-body iframe.pdf-preview {
+      width: 100%; height: 100%; border: none; border-radius: var(--r-sm);
+    }
     .preview-body pre {
       width: 100%; align-self: flex-start;
       white-space: pre-wrap; word-break: break-word;
       font-family: var(--font-mono); font-size: 13px; line-height: 1.6;
       color: var(--text-secondary); margin: 0;
     }
+    .preview-body .md-preview {
+      width: 100%; align-self: flex-start;
+      font-size: 14px; line-height: 1.7; color: var(--text-secondary);
+    }
+    .md-preview h1 { font-size: 20px; color: var(--text-primary); margin: 20px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border-default); font-weight: 700; }
+    .md-preview h2 { font-size: 17px; color: var(--text-primary); margin: 18px 0 8px; padding-bottom: 4px; border-bottom: 1px solid var(--border-subtle); font-weight: 600; }
+    .md-preview h3 { font-size: 15px; color: var(--text-primary); margin: 14px 0 6px; font-weight: 600; }
+    .md-preview h4, .md-preview h5, .md-preview h6 { font-size: 14px; color: var(--text-secondary); margin: 12px 0 4px; font-weight: 600; }
+    .md-preview p { margin: 8px 0; }
+    .md-preview a { color: var(--blue); text-decoration: none; }
+    .md-preview a:hover { text-decoration: underline; }
+    .md-preview ul, .md-preview ol { padding-left: 24px; margin: 6px 0; }
+    .md-preview li { margin: 3px 0; }
+    .md-preview blockquote {
+      border-left: 3px solid var(--green); padding: 6px 16px;
+      margin: 8px 0; color: var(--text-muted); background: var(--green-glow);
+      border-radius: 0 var(--r-sm) var(--r-sm) 0;
+    }
+    .md-preview pre {
+      background: var(--bg-input); border: 1px solid var(--border-subtle);
+      border-radius: var(--r-sm); padding: 14px 16px;
+      margin: 10px 0; font-size: 13px; line-height: 1.5;
+      white-space: pre-wrap; word-break: break-all;
+    }
+    .md-preview code { font-family: var(--font-mono); }
+    .md-preview :not(pre) > code {
+      background: var(--bg-elevated); padding: 2px 6px; border-radius: 4px;
+      font-size: 12px; color: var(--text-primary);
+    }
+    .md-preview table { border-collapse: collapse; margin: 10px 0; width: 100%; }
+    .md-preview th, .md-preview td {
+      border: 1px solid var(--border-default); padding: 8px 12px;
+      text-align: left; font-size: 13px;
+    }
+    .md-preview th { background: var(--bg-surface); color: var(--text-primary); font-weight: 600; }
+    .md-preview tr:nth-child(even) { background: var(--bg-elevated); }
+    .md-preview hr { border: none; border-top: 1px solid var(--border-default); margin: 16px 0; }
+    .md-preview strong { color: var(--text-primary); }
+    .md-preview img { max-width: 100%; border-radius: var(--r-sm); }
 
     .delete-btn {
       padding: 6px 14px; background: transparent; color: var(--red);
@@ -132,6 +177,7 @@ export class MediaPage extends LitElement {
     .delete-btn:hover { background: var(--red-soft); }
 
     /* ---- Select Mode ---- */
+    .file-list { flex: 1; overflow-y: auto; min-height: 0; }
     .select-bar {
       display: flex; align-items: center; gap: 8px;
       padding: 8px 12px; border-bottom: 1px solid var(--border-subtle);
@@ -375,7 +421,7 @@ export class MediaPage extends LitElement {
 
   private typeIcon(type: string): string {
     const icons: Record<string, string> = {
-      image: "🖼", audio: "🎵", video: "🎬", text: "📄",
+      image: "🖼", audio: "🎵", video: "🎬", text: "📄", pdf: "📕",
     };
     return icons[type] || "📦";
   }
@@ -400,7 +446,12 @@ export class MediaPage extends LitElement {
         return html`<audio controls src=${url}></audio>`;
       case "video":
         return html`<video controls src=${url}></video>`;
+      case "pdf":
+        return html`<iframe class="pdf-preview" src=${url}></iframe>`;
       case "text":
+        if (this.selected.name.endsWith(".md")) {
+          return html`<div class="md-preview">${unsafeHTML(renderMarkdown(this.fileText))}</div>`;
+        }
         return html`<pre>${this.fileText}</pre>`;
       default:
         return html`<div class="empty">
@@ -509,7 +560,7 @@ export class MediaPage extends LitElement {
               <button class="sel-btn" @click=${this.enterSelectMode}>${t("media.select")}</button>
             </div>
           `}
-          ${this.renderFileList()}
+          <div class="file-list">${this.renderFileList()}</div>
         </div>
         <div class="preview-panel ${!this.mobileShowDetail ? "hidden" : ""}">
           ${!this.selected

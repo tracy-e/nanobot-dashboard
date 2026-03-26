@@ -6,6 +6,7 @@ from pathlib import Path
 from aiohttp import web
 
 from dashboard.config import SESSIONS_DIR
+from dashboard.utils.trash import safe_delete
 
 NOTES_FILE = SESSIONS_DIR / ".notes.json"
 
@@ -143,7 +144,7 @@ async def delete_session(request: web.Request) -> web.Response:
     if not str(filepath.resolve()).startswith(str(SESSIONS_DIR.resolve())):
         raise web.HTTPForbidden(text="Access denied")
 
-    filepath.unlink()
+    safe_delete(filepath)
 
     # Clean up note
     notes = _load_notes()

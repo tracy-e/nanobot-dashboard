@@ -5,16 +5,15 @@ Serves files from NANOBOT_ROOT/media/ — supports images, audio, video, text.
 
 import mimetypes
 import os
-import shutil
-import subprocess
 from pathlib import Path
+
+mimetypes.add_type("text/markdown", ".md")
 
 from aiohttp import web
 
 from dashboard.config import MEDIA_DIR
 from dashboard.utils.sanitize import safe_resolve
-
-_HAS_TRASH = shutil.which("trash") is not None
+from dashboard.utils.trash import safe_delete
 
 
 def _classify(mime: str) -> str:
@@ -31,6 +30,8 @@ def _classify(mime: str) -> str:
         "application/javascript",
     ):
         return "text"
+    if mime == "application/pdf":
+        return "pdf"
     return "other"
 
 
@@ -81,14 +82,6 @@ async def get_media_file(request: web.Request) -> web.Response:
     return web.FileResponse(filepath)
 
 
-def _trash_or_unlink(filepath: Path) -> None:
-    """Move file to trash if available, otherwise unlink."""
-    if _HAS_TRASH:
-        subprocess.run(["trash", str(filepath)], check=True)
-    else:
-        filepath.unlink()
-
-
 async def delete_media_file(request: web.Request) -> web.Response:
     """Delete a media file."""
     path = request.match_info["path"]
@@ -101,7 +94,7 @@ async def delete_media_file(request: web.Request) -> web.Response:
     if not filepath.is_file():
         raise web.HTTPNotFound(text="File not found")
 
-    _trash_or_unlink(filepath)
+    safe_delete(filepath)
     return web.json_response({"deleted": path})
 
 
@@ -120,9 +113,9 @@ async def batch_delete_media(request: web.Request) -> web.Response:
             if not filepath.is_file():
                 errors.append({"path": p, "error": "not found"})
                 continue
-            _trash_or_unlink(filepath)
+            safe_delete(filepath)
             deleted.append(p)
-        except (ValueError, subprocess.CalledProcessError) as e:
+        except (ValueError, OSError) as e:
             errors.append({"path": p, "error": str(e)})
 
     return web.json_response({"deleted": deleted, "errors": errors})

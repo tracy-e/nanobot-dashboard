@@ -336,9 +336,13 @@ export class SkillsPage extends LitElement {
     if (!this.selected || !this.activeFile) return;
     this.saving = true;
     try {
-      await api.updateSkillFile(this.selected.id, this.activeFile, this.editContent);
+      const selectedId = this.selected.id;
+      await api.updateSkillFile(selectedId, this.activeFile, this.editContent);
       this.fileContent = this.editContent;
       this.editing = false;
+      // Reload skill list to reflect metadata changes (description, triggers, etc.)
+      await this.load();
+      this.selected = this.skills.find((s: any) => s.id === selectedId) || null;
     } catch (e: any) {
       this.error = e.message;
     }
