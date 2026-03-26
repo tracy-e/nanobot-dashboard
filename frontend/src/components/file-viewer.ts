@@ -251,6 +251,14 @@ export abstract class FileViewer extends LitElement {
       border-radius: var(--r-sm);
     }
 
+    /* PDF preview */
+    .pdf-preview {
+      width: 100%; height: calc(100vh - 220px); min-height: 400px;
+    }
+    .pdf-preview iframe {
+      width: 100%; height: 100%; border: none; border-radius: var(--r-sm);
+    }
+
     /* Code-only preview */
     .code-preview pre {
       background: var(--bg-input); border: 1px solid var(--border-subtle);
@@ -483,9 +491,14 @@ export abstract class FileViewer extends LitElement {
   }
 
   private static IMAGE_EXTS = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico"]);
+  private static PDF_EXT = "pdf";
 
   private isImage(path: string): boolean {
     return FileViewer.IMAGE_EXTS.has(this.getExt(path).toLowerCase());
+  }
+
+  private isPdf(path: string): boolean {
+    return this.getExt(path).toLowerCase() === FileViewer.PDF_EXT;
   }
 
   async selectFile(path: string, updateHash = true) {
@@ -493,7 +506,7 @@ export abstract class FileViewer extends LitElement {
     this.editing = false;
     this.mobileShowDetail = true;
     this.content = "";
-    if (!this.isImage(path)) {
+    if (!this.isImage(path) && !this.isPdf(path)) {
       try {
         const res = await api.getMemoryFile(path);
         this.content = res.content;
@@ -709,6 +722,9 @@ export abstract class FileViewer extends LitElement {
     const ext = this.getExt(this.selectedPath);
     if (this.isImage(this.selectedPath)) {
       return html`<div class="image-preview"><img src="${api.memoryRawUrl(this.selectedPath)}" alt="${this.selectedPath}" /></div>`;
+    }
+    if (this.isPdf(this.selectedPath)) {
+      return html`<div class="pdf-preview"><iframe src="${api.memoryRawUrl(this.selectedPath)}"></iframe></div>`;
     }
     if (ext === "md") {
       return html`<div class="md-preview">${unsafeHTML(renderMarkdown(this.content))}</div>`;
