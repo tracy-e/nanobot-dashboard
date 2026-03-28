@@ -8,7 +8,7 @@ NANOBOT_ROOT = Path(os.environ.get("NANOBOT_ROOT", Path.home() / ".nanobot"))
 
 # Derived paths
 CONFIG_FILE = NANOBOT_ROOT / "config.json"
-CRON_JOBS_FILE = NANOBOT_ROOT / "cron" / "jobs.json"
+CRON_JOBS_FILE = NANOBOT_ROOT / "workspace" / "cron" / "jobs.json"
 SESSIONS_DIR = NANOBOT_ROOT / "workspace" / "sessions"
 WORKSPACE_DIR = NANOBOT_ROOT / "workspace"
 MEMORY_DIR = NANOBOT_ROOT / "workspace" / "memory"
