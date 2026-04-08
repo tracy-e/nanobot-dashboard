@@ -4,6 +4,7 @@ import logging
 import sys
 from pathlib import Path
 
+import aiohttp
 from aiohttp import web
 
 # Ensure dashboard package is importable
@@ -28,6 +29,16 @@ def create_app() -> web.Application:
     media.setup(app)
     chat.setup(app)
     search.setup(app)
+
+    # Shared HTTP client for outbound requests (e.g. nanobot API)
+    async def _on_startup(app_: web.Application):
+        app_['http_client'] = aiohttp.ClientSession()
+
+    async def _on_cleanup(app_: web.Application):
+        await app_['http_client'].close()
+
+    app.on_startup.append(_on_startup)
+    app.on_cleanup.append(_on_cleanup)
 
     # Serve frontend static files
     static_dir = Path(__file__).parent / "static"

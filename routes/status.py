@@ -2,9 +2,10 @@
 
 import json
 
+import aiohttp as _aiohttp
 from aiohttp import web
 
-from dashboard.config import NANOBOT_ROOT
+from dashboard.config import NANOBOT_API_URL, NANOBOT_ROOT
 from dashboard.utils.nanobot import is_gateway_running, read_config, read_cron_jobs
 from dashboard.utils.sanitize import sanitize_config
 
@@ -29,6 +30,26 @@ def _read_active_models(config: dict) -> dict:
     return result
 
 
+async def _check_api_status(client: _aiohttp.ClientSession) -> dict:
+    """Probe nanobot API server health and model info."""
+    try:
+        async with client.get(
+            f"{NANOBOT_API_URL}/health",
+            timeout=_aiohttp.ClientTimeout(total=1),
+        ) as resp:
+            if resp.status != 200:
+                return {"running": False}
+        async with client.get(
+            f"{NANOBOT_API_URL}/v1/models",
+            timeout=_aiohttp.ClientTimeout(total=1),
+        ) as resp:
+            data = await resp.json()
+            model_id = data["data"][0]["id"] if data.get("data") else "unknown"
+            return {"running": True, "model": model_id}
+    except Exception:
+        return {"running": False}
+
+
 async def get_status(request: web.Request) -> web.Response:
     gateway = await is_gateway_running()
 
@@ -46,8 +67,12 @@ async def get_status(request: web.Request) -> web.Response:
         "enabled": sum(1 for j in jobs if j.get("enabled")),
     }
 
+    client: _aiohttp.ClientSession = request.app['http_client']
+    api_status = await _check_api_status(client)
+
     return web.json_response({
         "gateway": gateway,
+        "api": api_status,
         "model": models["model"],
         "compactModel": models["compact_model"],
         "channels": channels,
