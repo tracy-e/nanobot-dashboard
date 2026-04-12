@@ -58,7 +58,8 @@ async def get_status(request: web.Request) -> web.Response:
 
     channels = {}
     for name, ch in config.get("channels", {}).items():
-        channels[name] = {"enabled": ch.get("enabled", False)}
+        if isinstance(ch, dict):
+            channels[name] = {"enabled": ch.get("enabled", False)}
 
     cron_data = read_cron_jobs()
     jobs = cron_data.get("jobs", [])
